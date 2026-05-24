@@ -1,0 +1,145 @@
+export const products = [
+    {
+        id: '1',
+        name: 'MacBook Air M3',
+        slug: 'macbook-air-m3',
+        description: 'Strikingly thin and fast, so you can work, play, or create anywhere.',
+        price: 999,
+        image: '/MacBook Air.png',
+        category: 'macbook',
+        tags: ['M3 Chip', '13-inch Retina', '18hr Battery'],
+        details: 'The MacBook Air with M3 chip is up to 1.6x faster than MacBook Air (M1). With up to 18 hours of battery life, a 1080p FaceTime HD camera, and a stunning Liquid Retina display, it’s built for everything you do.'
+    },
+    {
+        id: '2',
+        name: 'MacBook Pro 14"',
+        slug: 'macbook-pro-14',
+        description: 'The most advanced chips ever built for a personal computer.',
+        price: 1999,
+        image: '/MacBook Pro.png',
+        category: 'macbook',
+        tags: ['M3 Pro/Max', 'Liquid Retina XDR', 'Extreme Performance'],
+        details: 'MacBook Pro blasts forward with Pro and Max chips. Built on 3-nanometer technology and featuring an all-new GPU architecture, they’re the most advanced chips ever built for a personal computer.'
+    },
+    {
+        id: '3',
+        name: 'iMac 24"',
+        slug: 'imac-24',
+        description: 'The world’s best all-in-one desktop, now supercharged by the M3 chip.',
+        price: 1799,
+        image: '/iMac.png',
+        category: 'desktop',
+        tags: ['M3 Chip', '4.5K Retina', '7 Vibrant Colors'],
+        details: 'The world’s best all-in-one desktop, now supercharged by the M3 chip. With a stunning 24-inch display that gives you all the space you need and an iconic design that livens up any space.'
+    },
+    {
+        id: '4',
+        name: 'Mac Studio',
+        slug: 'mac-studio',
+        description: 'A compact powerhouse that fits right on your desk with world-class connectivity.',
+        price: 1999,
+        image: '/Mac Studio.png',
+        category: 'desktop',
+        tags: ['M2 Max/Ultra', 'Compact Pro Power', 'Massive I/O'],
+        details: 'Mac Studio is an entirely new Mac desktop. It packs outrageous performance, extensive connectivity, and new capabilities into an unbelievably compact form, putting everything you need within easy reach.'
+    },
+    {
+        id: '5',
+        name: 'iPhone 15',
+        slug: 'iphone-15',
+        description: 'A huge leap forward for iPhone with a color-infused glass back and Dynamic Island.',
+        price: 799,
+        image: '/iphone 15.png',
+        category: 'iphone',
+        tags: ['A16 Bionic', '48MP Main Camera', 'USB-C'],
+        details: 'iPhone 15 brings you the Dynamic Island, a 48MP Main camera, and USB-C, all in a durable color-infused glass and aluminum design.'
+    },
+    {
+        id: '6',
+        name: 'iPhone 16',
+        slug: 'iphone-16',
+        description: 'Built for Apple Intelligence. Versatile. Fast. Effortless.',
+        price: 999,
+        image: '/iphone 16.png',
+        category: 'iphone',
+        tags: ['A18 Chip', 'Action Button', 'Apple Intelligence'],
+        details: 'iPhone 16 is built from the ground up for Apple Intelligence. It features the all-new A18 chip, Camera Control, and the Action button for a more personalized and professional experience.'
+    },
+    {
+        id: '7',
+        name: 'iPhone 16 Pro',
+        slug: 'iphone-16-pro',
+        description: 'The ultimate iPhone. Titanium. Pro Camera System. A18 Pro.',
+        price: 1299,
+        image: '/iPhone 16 Pro.png',
+        category: 'iphone',
+        tags: ['A18 Pro', 'Titanium Design', '5x Telephoto'],
+        details: 'iPhone 16 Pro features a Grade 5 titanium design with a new, refined microblasted finish. A18 Pro chip enables Apple Intelligence with a huge leap in performance and efficiency.'
+    },
+    {
+        id: '8',
+        name: 'Apple Watch Ultra 2',
+        slug: 'apple-watch-ultra-2',
+        description: 'The most rugged and capable Apple Watch. Built for the challenges of the outdoors.',
+        price: 799,
+        image: '/Apple Watch Ultra 2.png',
+        category: 'watch',
+        tags: ['Titanium Case', '36hr Battery', 'Precision Dual-Freq GPS'],
+        details: 'The most rugged and capable Apple Watch pushes the limits again. Featuring the all-new S9 SiP. The brightest Apple display ever. And the ability to magically interact with your watch without touching the screen.'
+    },
+    {
+        id: '9',
+        name: 'Apple Watch Series 10',
+        slug: 'apple-watch-series-10',
+        description: 'A milestone in Every. Single. Way. Thinner than ever with the largest display.',
+        price: 499,
+        image: '/Apple Watch Series 10.png',
+        category: 'watch',
+        tags: ['Wide-Angle OLED', 'Vitals App', 'Fastest Charging'],
+        details: 'Apple Watch Series 10 is a major milestone for Apple Watch. It features our largest and most advanced display yet, showing more information than ever. It’s our thinnest watch ever, with the fastest charging yet.'
+    },
+    {
+        id: '10',
+        name: 'Apple Watch SE',
+        slug: 'apple-watch-se',
+        description: 'Heavy on features. Light on price. Everything you need to stay motivated and active.',
+        price: 299,
+        image: '/Apple Watch SE.png',
+        category: 'watch',
+        tags: ['S8 SiP', 'Fall Detection', 'Heart Rate Monitoring'],
+        details: 'Apple Watch SE has the same large Retina display as Series 6, so you can see more at a glance. Advanced sensors to track all the ways you move and powerful features to keep you healthy and safe.'
+    },
+    {
+        id: '11',
+        name: 'AirPods 4 with ANC',
+        slug: 'airpods-4-with-anc',
+        description: 'The first open-ear AirPods with Active Noise Cancellation.',
+        price: 179,
+        image: '/AirPods 4 with Anc.png',
+        category: 'audio',
+        tags: ['H2 Chip', 'Active Noise Cancellation', 'Spatial Audio'],
+        details: 'AirPods 4 with Active Noise Cancellation — featuring a totally transformed audio experience with Adaptive Audio and Transparency mode, and a redesigned fit for all-day comfort.'
+    },
+    {
+        id: '12',
+        name: 'Apple Pencil Pro',
+        slug: 'apple-pencil-pro',
+        description: 'Engineered for limitless creativity with advanced pro features.',
+        price: 129,
+        image: '/Apple Pencil.png',
+        category: 'accessories',
+        tags: ['Squeeze Gesture', 'Barrel Roll', 'Haptic Feedback'],
+        details: 'Apple Pencil Pro adds even more magical capabilities to help bring your ideas to life. New advanced features like squeeze, barrel roll, and haptic feedback make marking up, taking notes, and creating more intuitive than ever.'
+    },
+    {
+        id: '13',
+        name: 'Apple TV 4K',
+        slug: 'apple-tv-4-k',
+        description: 'The ultimate cinematic experience. The best of Apple brings your screen to life.',
+        price: 129,
+        image: '/Apple Tv.png',
+        category: 'audio',
+        tags: ['A15 Bionic', '4K Dolby Vision', 'Siri Remote'],
+        details: 'Apple TV 4K (3rd generation) brings the best of TV together with your favorite Apple devices and services — including the new FaceTime experience on the biggest screen in your home.'
+    },
+];
