@@ -2,6 +2,7 @@ const jwt = require('jsonwebtoken');
 const asyncHandler = require('./async.middleware');
 const ApiError = require('../utils/ApiError');
 const User = require('../models/user.model');
+const { getJwtAccessSecret } = require('../config/env');
 
 // Protect routes
 exports.protect = asyncHandler(async (req, res, next) => {
@@ -21,7 +22,7 @@ exports.protect = asyncHandler(async (req, res, next) => {
   try {
     const decoded = jwt.verify(
       token,
-      process.env.JWT_ACCESS_SECRET || 'access_secret'
+      getJwtAccessSecret()
     );
 
     req.user = await User.findById(decoded.id);
@@ -34,6 +35,34 @@ exports.protect = asyncHandler(async (req, res, next) => {
   } catch (err) {
     return next(new ApiError(401, 'Not authorized to access this route'));
   }
+});
+
+exports.optionalAuth = asyncHandler(async (req, res, next) => {
+  let token;
+
+  if (
+    req.headers.authorization &&
+    req.headers.authorization.startsWith('Bearer')
+  ) {
+    token = req.headers.authorization.split(' ')[1];
+  }
+
+  if (!token) {
+    return next();
+  }
+
+  try {
+    const decoded = jwt.verify(token, getJwtAccessSecret());
+    const user = await User.findById(decoded.id);
+
+    if (user && user.isActive) {
+      req.user = user;
+    }
+  } catch (err) {
+    // Guest checkout should still work if an old token is present.
+  }
+
+  next();
 });
 
 // Grant access to specific roles (Middleware Factory)

@@ -5,41 +5,181 @@ const User = require('../src/models/user.model');
 
 const products = [
   {
-    name: 'Tekron X1 Smartphone',
-    slug: 'tekron-x1-smartphone',
-    description: 'The latest flagship smartphone with advanced camera system.',
-    price: 999.99,
-    compareAtPrice: 1099.99,
-    category: 'Smartphones',
-    brand: 'Tekron',
-    images: ['https://via.placeholder.com/600x600?text=Tekron+X1'],
-    stock: 50,
-    sku: 'TK-X1-001',
+    name: 'iPhone 16 Pro',
+    slug: 'iphone-16-pro',
+    description: 'A smaller Pro iPhone with a titanium build, A18 Pro chip, Camera Control, and the same 5x Telephoto reach as the larger Pro Max.',
+    price: 1199,
+    compareAtPrice: 1299,
+    category: 'iPhone',
+    brand: 'Apple',
+    images: ['/iPhone 16 Pro.png'],
+    stock: 24,
+    sku: 'APL-IP16P-256',
     isFeatured: true,
+    tags: ['A18 Pro', '6.3-inch XDR', '5x Telephoto'],
+    details: 'Best for creators and power users who want the Pro camera system without moving to the biggest phone. You get a 48MP Fusion camera, 48MP Ultra Wide, 5x Telephoto, ProMotion, USB-C, and the dedicated Camera Control button.',
   },
   {
-    name: 'Tekron Pro Laptop',
-    slug: 'tekron-pro-laptop',
-    description: 'High-performance laptop for professionals and creators.',
-    price: 1999.99,
-    compareAtPrice: 2199.99,
-    category: 'Laptops',
-    brand: 'Tekron',
-    images: ['https://via.placeholder.com/600x600?text=Tekron+Pro'],
+    name: 'iPhone 16',
+    slug: 'iphone-16',
+    description: 'The everyday iPhone with an A18 chip, Camera Control, Dynamic Island, USB-C, and a 48MP Fusion camera.',
+    price: 999,
+    category: 'iPhone',
+    brand: 'Apple',
+    images: ['/iphone 16.png'],
     stock: 30,
-    sku: 'TK-PRO-001',
+    sku: 'APL-IP16-128',
     isFeatured: true,
+    tags: ['A18 Chip', '6.1-inch XDR', 'Camera Control'],
+    details: 'A strong fit if you want the current iPhone design and speed without paying for the Pro camera stack. It includes a 6.1-inch Super Retina XDR display, Action button, Camera Control, 48MP Fusion camera, and support for Apple Intelligence.',
   },
   {
-    name: 'Wireless Noise-Canceling Headphones',
-    slug: 'wireless-headphones',
-    description: 'Premium over-ear headphones with active noise cancellation.',
-    price: 299.99,
+    name: 'iPhone 15',
+    slug: 'iphone-15',
+    description: 'A polished iPhone with Dynamic Island, USB-C, a 48MP main camera, and dependable A16 Bionic performance.',
+    price: 799,
+    category: 'iPhone',
+    brand: 'Apple',
+    images: ['/iphone 15.png'],
+    stock: 28,
+    sku: 'APL-IP15-128',
+    tags: ['A16 Bionic', '48MP Main', 'USB-C'],
+    details: 'A practical upgrade for buyers who want modern iPhone basics at a lower price than iPhone 16. It brings Dynamic Island, a color-infused glass back, USB-C charging, a 48MP main camera with 2x optical-quality zoom, and all-day battery life.',
+  },
+  {
+    name: 'MacBook Pro 14-inch',
+    slug: 'macbook-pro',
+    description: 'A compact pro notebook for code, design, photo, video, and production work that needs sustained performance.',
+    price: 2499,
+    compareAtPrice: 2699,
+    category: 'Mac',
+    brand: 'Apple',
+    images: ['/MacBook Pro.png'],
+    stock: 18,
+    sku: 'APL-MBP-14-M3',
+    isFeatured: true,
+    tags: ['M3 Pro', 'Liquid Retina XDR', 'HDMI + SDXC'],
+    details: 'Made for heavier workloads than MacBook Air. The 14-inch MacBook Pro pairs Apple silicon with a Liquid Retina XDR display, active cooling, long battery life, MagSafe charging, HDMI, SDXC, and Thunderbolt ports.',
+  },
+  {
+    name: 'MacBook Air 13-inch',
+    slug: 'macbook-air',
+    description: 'A thin, silent Mac for study, travel, writing, browsing, calls, and day-to-day business work.',
+    price: 1099,
+    compareAtPrice: 1199,
+    category: 'Mac',
+    brand: 'Apple',
+    images: ['/MacBook Air.png'],
+    stock: 32,
+    sku: 'APL-MBA-13-M3',
+    isFeatured: true,
+    tags: ['M3 Chip', '13.6-inch Liquid Retina', 'Fanless'],
+    details: 'The right Mac when portability and battery life matter more than workstation power. The M3 MacBook Air has a 13.6-inch Liquid Retina display, a fanless body, MagSafe, two Thunderbolt ports, and support for two external displays when the lid is closed.',
+  },
+  {
+    name: 'iMac 24-inch',
+    slug: 'imac-24-inch',
+    description: 'A bright all-in-one desktop for a clean home office, reception desk, studio, or shared family workspace.',
+    price: 1499,
+    category: 'Mac',
+    brand: 'Apple',
+    images: ['/iMac.png'],
+    stock: 14,
+    sku: 'APL-IMAC-24-M3',
+    tags: ['M3 Chip', '4.5K Retina', '1080p Camera'],
+    details: 'iMac keeps the computer, display, speakers, camera, and microphones in one slim machine. The 24-inch 4.5K Retina display is sharp and bright, while the M3 chip is quick enough for office work, creative apps, school projects, and media.',
+  },
+  {
+    name: 'Mac Studio',
+    slug: 'mac-studio',
+    description: 'A compact desktop workstation for editors, designers, developers, and teams that need serious power on the desk.',
+    price: 2199,
+    category: 'Mac',
+    brand: 'Apple',
+    images: ['/Mac Studio.png'],
+    stock: 10,
+    sku: 'APL-MSTUDIO-M2',
+    tags: ['M2 Max / Ultra', 'Compact Desktop', 'Front I/O'],
+    details: 'Mac Studio is the step up when a laptop or iMac is not enough. It supports demanding media, 3D, software, and production workflows with a small footprint, strong thermal design, and a wide set of front and rear ports.',
+  },
+  {
+    name: 'Apple Watch Ultra 2',
+    slug: 'apple-watch-ultra-2',
+    description: 'Apple’s rugged watch for training, hiking, diving, travel, and long days away from a charger.',
+    price: 799,
+    category: 'Watch',
+    brand: 'Apple',
+    images: ['/Apple Watch Ultra 2.png'],
+    stock: 26,
+    sku: 'APL-WU2-GPS',
+    tags: ['Titanium Case', 'Dual-Frequency GPS', '3000-nit Display'],
+    details: 'Ultra 2 is built for people who push their watch harder. It has a titanium case, bright Always-On Retina display, precision dual-frequency GPS, Action button, depth gauge, water resistance for recreational scuba, and longer battery life than the regular Apple Watch line.',
+  },
+  {
+    name: 'Apple Watch Series 10',
+    slug: 'apple-watch-series-10',
+    description: 'A thinner Apple Watch with a larger wide-angle OLED display, faster charging, and daily health tracking.',
+    price: 499,
+    category: 'Watch',
+    brand: 'Apple',
+    images: ['/Apple Watch Series 10.png'],
+    stock: 34,
+    sku: 'APL-WS10-GPS',
+    tags: ['S10 SiP', 'Wide-Angle OLED', 'Fast Charging'],
+    details: 'Series 10 is the everyday Apple Watch with the most refined shape. It keeps notifications, workouts, sleep, heart insights, safety features, and Apple Pay close at hand while using a thinner case and a larger display than earlier Series models.',
+  },
+  {
+    name: 'Apple Watch SE',
+    slug: 'apple-watch-se',
+    description: 'The value Apple Watch for fitness, notifications, safety features, and family setup.',
+    price: 299,
+    category: 'Watch',
+    brand: 'Apple',
+    images: ['/Apple Watch SE.png'],
+    stock: 40,
+    sku: 'APL-WSE-2',
+    tags: ['S8 SiP', 'Retina Display', 'Crash Detection'],
+    details: 'Apple Watch SE covers the core experience at a lower price. It tracks workouts and sleep, shows calls and notifications, supports Apple Pay, and includes safety features like Fall Detection, Crash Detection, Emergency SOS, and heart-rate alerts.',
+  },
+  {
+    name: 'AirPods 4 with ANC',
+    slug: 'airpods-4-with-anc',
+    description: 'Open-fit AirPods with active noise cancellation, Transparency mode, Personalized Spatial Audio, and a compact USB-C case.',
+    price: 179,
     category: 'Audio',
-    brand: 'SoundMaster',
-    images: ['https://via.placeholder.com/600x600?text=Headphones'],
-    stock: 100,
-    sku: 'SM-HP-001',
+    brand: 'Apple',
+    images: ['/AirPods 4 with Anc.png'],
+    stock: 60,
+    sku: 'APL-AP4-ANC',
+    isFeatured: true,
+    tags: ['H2 Chip', 'ANC', 'USB-C Case'],
+    details: 'A good choice if you prefer the AirPods open-ear fit but still want noise control. This model adds Active Noise Cancellation, Transparency mode, Adaptive Audio, Conversation Awareness, Personalized Spatial Audio, and a wireless charging case with USB-C.',
+  },
+  {
+    name: 'Apple Pencil Pro',
+    slug: 'apple-pencil-pro',
+    description: 'A precise stylus for compatible iPad models with squeeze, barrel roll, hover, haptic feedback, and Find My support.',
+    price: 129,
+    category: 'Accessories',
+    brand: 'Apple',
+    images: ['/Apple Pencil.png'],
+    stock: 52,
+    sku: 'APL-PENCIL-PRO',
+    tags: ['Squeeze', 'Barrel Roll', 'Haptics'],
+    details: 'Apple Pencil Pro is for note takers, illustrators, editors, and students who want more control than a basic stylus. Squeeze opens tool options, barrel roll changes brush orientation, hover previews your mark, and haptic feedback confirms actions.',
+  },
+  {
+    name: 'Apple TV 4K',
+    slug: 'apple-tv-4k',
+    description: 'A fast 4K streaming box for Apple TV+, major streaming apps, games, AirPlay, and smart-home control.',
+    price: 129,
+    category: 'Entertainment',
+    brand: 'Apple',
+    images: ['/Apple Tv.png'],
+    stock: 38,
+    sku: 'APL-TV4K-128',
+    tags: ['A15 Bionic', '4K HDR', 'Siri Remote'],
+    details: 'Apple TV 4K keeps the living-room experience quick and clean. It supports 4K HDR formats including Dolby Vision and HDR10+, Dolby Atmos audio, Apple Arcade, AirPlay, and Siri Remote with USB-C charging. The Ethernet model also works as a Thread home hub.',
   },
 ];
 
@@ -53,14 +193,38 @@ const seedProducts = async () => {
       process.exit(1);
     }
 
-    await Product.deleteMany(); // Clear existing products
-
     const productsWithUser = products.map((product) => ({
       ...product,
       createdBy: admin._id,
     }));
+    const seedSlugs = productsWithUser.map((product) => product.slug);
 
-    await Product.insertMany(productsWithUser);
+    const deleteResult = await Product.deleteMany({ slug: { $nin: seedSlugs } });
+    if (deleteResult.deletedCount > 0) {
+      console.log(`Removed ${deleteResult.deletedCount} old product(s).`);
+    }
+
+    for (const product of productsWithUser) {
+      await Product.findOneAndUpdate(
+        { slug: product.slug },
+        { $set: product },
+        { upsert: true, runValidators: true, setDefaultsOnInsert: true }
+      );
+    }
+
+    // Fix legacy placeholder or broken remote image URLs in MongoDB
+    const allProducts = await Product.find({});
+    for (const doc of allProducts) {
+      const hasBadImage = (doc.images || []).some(
+        (img) => typeof img === 'string' && /placeholder|via\.placeholder/i.test(img)
+      );
+      if (!hasBadImage) continue;
+
+      const match = products.find((p) => p.slug === doc.slug);
+      doc.images = match ? match.images : ['/grid.svg'];
+      await doc.save();
+      console.log(`Fixed images for: ${doc.slug}`);
+    }
 
     console.log('Products seeded successfully!');
     process.exit(0);

@@ -10,5 +10,5 @@ export default function ProductForm() {
     router.replace('/admin/products');
   }, [router]);
 
-  return <div className="p-8 text-center text-slate-500">Opening product manager...</div>;
+  return <div className="p-8 text-center text-muted-foreground">Opening product manager</div>;
 }

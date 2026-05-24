@@ -5,24 +5,31 @@ const connectDB = require('./src/config/db');
 const { connectRedis } = require('./src/config/redis');
 const { initSocket } = require('./src/sockets/socket');
 
-// Connect to database and Redis
 connectDB();
 connectRedis();
 
 const server = http.createServer(app);
-
-// Initialize Socket.io
 initSocket(server);
 
 const PORT = process.env.PORT || 5000;
 
-server.listen(PORT, () => {
-  console.log(`Server running in ${process.env.NODE_ENV} mode on port ${PORT}`);
+server.on('error', (err) => {
+  if (err.code === 'EADDRINUSE') {
+    console.error(
+      `\nPort ${PORT} is already in use. Another backend instance may still be running.\n` +
+        `Windows fix: netstat -ano | findstr :${PORT}  then  taskkill /PID <pid> /F\n` +
+        `Or set a different PORT in backend/.env\n`
+    );
+    process.exit(1);
+  }
+  throw err;
 });
 
-// Handle unhandled promise rejections
-process.on('unhandledRejection', (err, promise) => {
-  console.log(`Error: ${err.message}`);
-  // Close server & exit process
+server.listen(PORT, () => {
+  console.log(`Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
+});
+
+process.on('unhandledRejection', (err) => {
+  console.error(`Unhandled rejection: ${err.message}`);
   server.close(() => process.exit(1));
 });

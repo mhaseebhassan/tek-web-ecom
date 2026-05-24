@@ -1,9 +1,9 @@
 'use client';
 
-import { createContext, useState, useEffect, useContext } from 'react';
+import { createContext, useState, useEffect, useContext, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Cookies from 'js-cookie';
-import api from '../lib/api';
+import api, { getPayload } from '../lib/api';
 
 const AuthContext = createContext();
 
@@ -12,57 +12,76 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
-  useEffect(() => {
-    const loadUser = async () => {
-      const token = Cookies.get('accessToken');
-      if (!token) {
-        setLoading(false);
-        return;
-      }
+  const persistToken = (accessToken) => {
+    Cookies.set('accessToken', accessToken, {
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+    });
+  };
 
-      try {
-        const res = await api.get('/auth/me');
-        setUser(res.data.user);
-      } catch (error) {
-        console.error('Failed to load user', error);
-        Cookies.remove('accessToken');
-      } finally {
-        setLoading(false);
-      }
-    };
+  const loadUser = useCallback(async () => {
+    const token = Cookies.get('accessToken');
+    if (!token) {
+      setUser(null);
+      setLoading(false);
+      return;
+    }
 
-    loadUser();
+    try {
+      const res = await api.get('/auth/me');
+      const payload = getPayload(res.data);
+      setUser(payload.user);
+    } catch {
+      Cookies.remove('accessToken');
+      setUser(null);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  const login = async (email, password) => {
+  useEffect(() => {
+    loadUser();
+  }, [loadUser]);
+
+  const login = async (email, password, redirectTo) => {
     try {
       const res = await api.post('/auth/login', { email, password });
-      Cookies.set('accessToken', res.data.accessToken, { secure: false, sameSite: 'lax' });
-      setUser(res.data.user);
-      router.push('/');
+      const payload = getPayload(res.data);
+      persistToken(payload.accessToken);
+      setUser(payload.user);
+
+      if (redirectTo) {
+        router.push(redirectTo);
+      } else if (payload.user.role === 'admin') {
+        router.push('/admin');
+      } else {
+        router.push('/');
+      }
+
       return { success: true };
     } catch (error) {
-      return { success: false, error: error.response?.data?.message || 'Login failed' };
+      return { success: false, error: error.data?.message || error.message || 'Login failed' };
     }
   };
 
   const register = async (name, email, password) => {
     try {
       const res = await api.post('/auth/register', { name, email, password });
-      Cookies.set('accessToken', res.data.accessToken, { secure: false, sameSite: 'lax' });
-      setUser(res.data.user);
+      const payload = getPayload(res.data);
+      persistToken(payload.accessToken);
+      setUser(payload.user);
       router.push('/');
       return { success: true };
     } catch (error) {
-      return { success: false, error: error.response?.data?.message || 'Registration failed' };
+      return { success: false, error: error.data?.message || error.message || 'Registration failed' };
     }
   };
 
   const logout = async () => {
     try {
       await api.post('/auth/logout');
-    } catch (error) {
-      console.error('Logout error', error);
+    } catch {
+      // ignore network errors during logout
     } finally {
       Cookies.remove('accessToken');
       setUser(null);
@@ -70,8 +89,10 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const isAdmin = user?.role === 'admin';
+
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, register, logout, loadUser, isAdmin }}>
       {children}
     </AuthContext.Provider>
   );

@@ -1,29 +1,28 @@
-import prisma from '@/lib/prisma';
+'use client';
+
+import { useEffect, useState } from 'react';
+import api from '@/lib/api';
 import OrdersTableClient from '@/components/admin/OrdersTableClient';
 
-export const dynamic = 'force-dynamic';
+export default function OrdersPage() {
+  const [orders, setOrders] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState('');
 
-export default async function OrdersPage() {
-  const orders = await prisma.order.findMany({
-    include: {
-      user: {
-        select: {
-          name: true,
-          email: true,
-        },
-      },
-      items: {
-        include: {
-          product: {
-            select: {
-              name: true,
-            },
-          },
-        },
-      },
-    },
-    orderBy: { createdAt: 'desc' },
-  });
+  useEffect(() => {
+    const loadOrders = async () => {
+      try {
+        const response = await api.get('/admin/orders');
+        setOrders(response.data.orders || []);
+      } catch (error) {
+        setError(error.data?.message || 'Failed to load orders');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadOrders();
+  }, []);
 
   const totalRevenue = orders.reduce((sum, order) => sum + order.totalAmount, 0);
   const pendingCount = orders.filter((order) => order.status === 'pending').length;
@@ -33,26 +32,33 @@ export default async function OrdersPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-3xl font-black text-slate-900 tracking-tight">Orders</h1>
-        <p className="text-slate-500 mt-1">Track, update, and manage every purchase.</p>
+        <h1 className="text-3xl font-black text-foreground tracking-tight">Orders</h1>
+        <p className="text-muted-foreground mt-1">Track, update, and manage every purchase.</p>
       </div>
 
+      {isLoading ? <p className="text-muted-foreground">Loading orders...</p> : null}
+      {error ? (
+        <div className="rounded-2xl border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-sm font-semibold text-rose-400">
+          {error}
+        </div>
+      ) : null}
+
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="rounded-[2rem] glass-panel p-6 shadow-xl shadow-teal-500/10 border border-amber-200/60">
-          <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Total Revenue</p>
-          <p className="mt-3 text-2xl font-black text-slate-900">${totalRevenue.toLocaleString()}</p>
+        <div className="metric-card relative overflow-hidden">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground relative z-10">Total Revenue</p>
+          <p className="mt-2 text-3xl font-bold text-foreground relative z-10">${totalRevenue.toLocaleString()}</p>
         </div>
-        <div className="rounded-[2rem] glass-panel p-6 shadow-xl shadow-teal-500/10 border border-amber-200/60">
-          <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Pending</p>
-          <p className="mt-3 text-2xl font-black text-slate-900">{pendingCount}</p>
+        <div className="metric-card relative overflow-hidden">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground relative z-10">Pending</p>
+          <p className="mt-2 text-3xl font-bold text-foreground relative z-10">{pendingCount}</p>
         </div>
-        <div className="rounded-[2rem] glass-panel p-6 shadow-xl shadow-teal-500/10 border border-amber-200/60">
-          <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Processing</p>
-          <p className="mt-3 text-2xl font-black text-slate-900">{processingCount}</p>
+        <div className="metric-card relative overflow-hidden">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground relative z-10">Processing</p>
+          <p className="mt-2 text-3xl font-bold text-foreground relative z-10">{processingCount}</p>
         </div>
-        <div className="rounded-[2rem] glass-panel p-6 shadow-xl shadow-teal-500/10 border border-amber-200/60">
-          <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Delivered</p>
-          <p className="mt-3 text-2xl font-black text-slate-900">{deliveredCount}</p>
+        <div className="metric-card relative overflow-hidden">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground relative z-10">Delivered</p>
+          <p className="mt-2 text-3xl font-bold text-foreground relative z-10">{deliveredCount}</p>
         </div>
       </div>
 

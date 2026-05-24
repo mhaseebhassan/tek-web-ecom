@@ -17,6 +17,9 @@ const productSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    details: {
+      type: String,
+    },
     price: {
       type: Number,
       required: true,
@@ -48,6 +51,12 @@ const productSchema = new mongoose.Schema(
     sku: {
       type: String,
     },
+    tags: [
+      {
+        type: String,
+        trim: true,
+      },
+    ],
     ratingAverage: {
       type: Number,
       default: 0,

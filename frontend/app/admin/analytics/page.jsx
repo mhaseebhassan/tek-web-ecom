@@ -1,38 +1,29 @@
-import prisma from '@/lib/prisma';
+'use client';
 
-export const dynamic = 'force-dynamic';
+import { useEffect, useState } from 'react';
+import api from '@/lib/api';
 
 const STATUSES = ['pending', 'processing', 'shipped', 'delivered', 'cancelled'];
 
-export default async function AnalyticsPage() {
-  const startDate = new Date();
-  startDate.setDate(startDate.getDate() - 29);
+export default function AnalyticsPage() {
+  const [orders, setOrders] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState('');
 
-  const orders = await prisma.order.findMany({
-    where: {
-      createdAt: { gte: startDate },
-    },
-    select: {
-      totalAmount: true,
-      status: true,
-      createdAt: true,
-    },
-    orderBy: { createdAt: 'asc' },
-  });
+  useEffect(() => {
+    const loadAnalytics = async () => {
+      try {
+        const response = await api.get('/admin/analytics');
+        setOrders(response.data.orders || []);
+      } catch (error) {
+        setError(error.data?.message || 'Failed to load analytics');
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-  const items = await prisma.orderItem.findMany({
-    where: {
-      order: { createdAt: { gte: startDate } },
-    },
-    include: {
-      product: {
-        select: {
-          name: true,
-          category: true,
-        },
-      },
-    },
-  });
+    loadAnalytics();
+  }, []);
 
   const currency = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
 
@@ -63,8 +54,9 @@ export default async function AnalyticsPage() {
     .join(' ');
 
   const productMap = new Map();
-  items.forEach((item) => {
-    const existing = productMap.get(item.productId) || {
+  orders.flatMap((order) => order.items || []).forEach((item) => {
+    const key = item.product?.id || item.name;
+    const existing = productMap.get(key) || {
       name: item.product?.name || 'Unknown',
       category: item.product?.category || 'Uncategorized',
       quantity: 0,
@@ -73,7 +65,7 @@ export default async function AnalyticsPage() {
 
     existing.quantity += item.quantity;
     existing.revenue += item.price * item.quantity;
-    productMap.set(item.productId, existing);
+    productMap.set(key, existing);
   });
 
   const topProducts = Array.from(productMap.values())
@@ -83,33 +75,40 @@ export default async function AnalyticsPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-3xl font-black text-slate-900 tracking-tight">Analytics</h1>
-        <p className="text-slate-500 mt-1">Insights for the last 30 days.</p>
+        <h1 className="text-3xl font-black text-foreground tracking-tight">Analytics</h1>
+        <p className="text-muted-foreground mt-1">Insights for the last 30 days.</p>
       </div>
 
+      {isLoading ? <p className="text-muted-foreground">Loading analytics...</p> : null}
+      {error ? (
+        <div className="rounded-2xl border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-sm font-semibold text-rose-400">
+          {error}
+        </div>
+      ) : null}
+
       <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-        <div className="rounded-[2rem] glass-panel p-6 shadow-xl shadow-teal-500/10 border border-amber-200/60">
-          <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Revenue</p>
-          <p className="mt-3 text-2xl font-black text-slate-900">{currency.format(totalRevenue)}</p>
+        <div className="metric-card relative overflow-hidden">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground relative z-10">Revenue</p>
+          <p className="mt-2 text-3xl font-bold text-foreground relative z-10">{currency.format(totalRevenue)}</p>
         </div>
-        <div className="rounded-[2rem] glass-panel p-6 shadow-xl shadow-teal-500/10 border border-amber-200/60">
-          <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Orders</p>
-          <p className="mt-3 text-2xl font-black text-slate-900">{totalOrders}</p>
+        <div className="metric-card relative overflow-hidden">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground relative z-10">Orders</p>
+          <p className="mt-2 text-3xl font-bold text-foreground relative z-10">{totalOrders}</p>
         </div>
-        <div className="rounded-[2rem] glass-panel p-6 shadow-xl shadow-teal-500/10 border border-amber-200/60">
-          <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Avg Order</p>
-          <p className="mt-3 text-2xl font-black text-slate-900">{currency.format(averageOrder)}</p>
+        <div className="metric-card relative overflow-hidden">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground relative z-10">Avg Order</p>
+          <p className="mt-2 text-3xl font-bold text-foreground relative z-10">{currency.format(averageOrder)}</p>
         </div>
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <div className="glass-panel rounded-[2.5rem] shadow-xl shadow-teal-500/10 border border-amber-200/60 overflow-hidden">
-          <div className="px-8 py-6 border-b border-amber-200/60 bg-amber-100/40">
-            <h2 className="text-xl font-bold text-slate-900">Daily Revenue</h2>
+        <div className="table-panel">
+          <div className="px-8 py-6 border-b border-white/10 bg-white/[0.055]">
+            <h2 className="text-xl font-bold text-foreground">Daily Revenue</h2>
           </div>
           <div className="px-8 py-6 space-y-6">
             {dailyTotals.length === 0 ? (
-              <p className="text-sm text-slate-400">No data in the last 30 days.</p>
+              <p className="text-sm text-muted-foreground">No data in the last 30 days.</p>
             ) : (
               <>
                 <div className="w-full h-48">
@@ -117,17 +116,17 @@ export default async function AnalyticsPage() {
                     <defs>
                       <linearGradient id="revenueStroke" x1="0" x2="1" y1="0" y2="0">
                         <stop offset="0%" stopColor="hsl(var(--primary))" />
-                        <stop offset="100%" stopColor="hsl(var(--accent))" />
+                        <stop offset="100%" stopColor="hsl(var(--secondary))" />
                       </linearGradient>
                       <linearGradient id="revenueFill" x1="0" x2="0" y1="0" y2="1">
-                        <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="0.3" />
+                        <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="0.1" />
                         <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity="0" />
                       </linearGradient>
                     </defs>
                     <polyline
                       fill="none"
                       stroke="url(#revenueStroke)"
-                      strokeWidth="3"
+                      strokeWidth="2"
                       strokeLinecap="round"
                       strokeLinejoin="round"
                       points={chartPoints}
@@ -141,13 +140,13 @@ export default async function AnalyticsPage() {
                 <div className="space-y-4">
                   {dailyTotals.map((entry) => (
                     <div key={entry.date} className="space-y-2">
-                      <div className="flex items-center justify-between text-xs font-semibold text-slate-500">
+                      <div className="flex items-center justify-between text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
                         <span>{entry.date}</span>
-                        <span>{currency.format(entry.total)}</span>
+                        <span className="text-foreground">{currency.format(entry.total)}</span>
                       </div>
-                      <div className="h-2 w-full rounded-full bg-amber-100/60">
+                      <div className="h-1.5 w-full rounded-full bg-white/[0.08]">
                         <div
-                          className="h-2 rounded-full bg-primary"
+                          className="h-1.5 rounded-full bg-gradient-to-r from-primary to-secondary"
                           style={{ width: `${maxDailyTotal ? (entry.total / maxDailyTotal) * 100 : 0}%` }}
                         />
                       </div>
@@ -159,26 +158,28 @@ export default async function AnalyticsPage() {
           </div>
         </div>
 
-        <div className="glass-panel rounded-[2.5rem] shadow-xl shadow-teal-500/10 border border-amber-200/60 overflow-hidden">
-          <div className="px-8 py-6 border-b border-amber-200/60 bg-amber-100/40">
-            <h2 className="text-xl font-bold text-slate-900">Top Products</h2>
+        <div className="table-panel">
+          <div className="px-8 py-6 border-b border-white/10 bg-white/[0.055]">
+            <h2 className="text-xl font-bold text-foreground">Top Products</h2>
           </div>
           <div className="px-8 py-6 space-y-4">
             {topProducts.length === 0 ? (
-              <p className="text-sm text-slate-400">No product data yet.</p>
+              <p className="text-sm text-muted-foreground">No product data yet.</p>
             ) : (
-              topProducts.map((product) => (
-                <div key={product.name} className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-semibold text-slate-800">{product.name}</p>
-                    <p className="text-xs text-slate-400">{product.category}</p>
+              <div className="space-y-3">
+                {topProducts.map((product) => (
+                  <div key={product.name} className="flex items-center justify-between p-4 bg-white/[0.055] rounded-[1.25rem] border border-white/10 hover:bg-white/[0.08] transition-colors">
+                    <div>
+                      <p className="text-sm font-bold text-foreground">{product.name}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">{product.category}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-bold text-primary">{currency.format(product.revenue)}</p>
+                      <p className="label label-primary mt-1">{product.quantity} sold</p>
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <p className="text-sm font-bold text-slate-900">{currency.format(product.revenue)}</p>
-                    <p className="text-xs text-slate-400">{product.quantity} sold</p>
-                  </div>
-                </div>
-              ))
+                ))}
+              </div>
             )}
           </div>
         </div>
@@ -189,18 +190,18 @@ export default async function AnalyticsPage() {
           const maxStatusCount = Math.max(...Object.values(statusCounts));
           const percent = maxStatusCount ? (statusCounts[status] / maxStatusCount) * 100 : 0;
           return (
-            <div key={status} className="rounded-[2rem] glass-panel p-5 shadow-xl shadow-teal-500/10 border border-amber-200/60 space-y-3">
-              <div className={`label ${status === 'delivered'
+            <div key={status} className="surface-card p-6 space-y-4">
+              <span className={`label ${status === 'delivered'
                 ? 'label-emerald'
                 : status === 'processing' || status === 'shipped'
                   ? 'label-teal'
                   : status === 'pending'
                     ? 'label-amber'
                     : 'label-rose'
-                }`}>{status}</div>
-              <p className="text-xl font-black text-slate-900">{statusCounts[status]}</p>
-              <div className="h-2 w-full rounded-full bg-amber-100/60">
-                <div className="h-2 rounded-full bg-primary" style={{ width: `${percent}%` }} />
+                }`}>{status}</span>
+              <p className="text-3xl font-bold text-foreground tracking-tight">{statusCounts[status]}</p>
+              <div className="h-1.5 w-full rounded-full bg-white/[0.08]">
+                <div className="h-1.5 rounded-full bg-primary" style={{ width: `${percent}%` }} />
               </div>
             </div>
           );

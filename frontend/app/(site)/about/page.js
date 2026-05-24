@@ -1,60 +1,52 @@
+import PageShell from '@/components/PageShell';
+import ScrollReveal from '@/components/ui/ScrollReveal';
+import FeatureCard from '@/components/ui/FeatureCard';
+import { SparklesIcon, UserGroupIcon, GlobeAltIcon, ShieldCheckIcon } from '@heroicons/react/24/outline';
+
 export default function AboutPage() {
   return (
-    <div className="py-16">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-16">
-          <h1 className="text-4xl font-bold mb-6">About Tekron</h1>
-          <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-            Your trusted destination for premium electronics and tech accessories since 2024
-          </p>
-        </div>
+    <PageShell
+      title="About Tekron"
+      subtitle="A small technology storefront focused on clear product information, tidy checkout, and orders customers can track."
+    >
+      <div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
+        <ScrollReveal>
+          <div className="surface-panel relative min-h-[360px] overflow-hidden p-8 md:p-10">
+            <div className="aurora-sheen opacity-60" />
+            <div className="relative z-10 max-w-2xl">
+              <span className="label label-primary">How we think</span>
+              <h2 className="mt-6 text-4xl font-black tracking-tight text-foreground md:text-5xl">
+                Buying tech should feel straightforward.
+              </h2>
+              <p className="mt-6 text-lg font-medium leading-8 text-muted-foreground">
+                Tekron keeps the catalog focused on devices people actually compare: Macs, iPhones, Apple Watch, AirPods, Apple TV, and useful accessories. Product pages call out the real specs, while the platform handles accounts, carts, orders, admin work, and live updates behind the scenes.
+              </p>
+            </div>
+          </div>
+        </ScrollReveal>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-12 mb-16">
-          <div>
-            <h2 className="text-2xl font-semibold mb-4">Our Mission</h2>
-            <p className="text-gray-600">
-              At Tekron, we're dedicated to providing our customers with the latest and most innovative technology products. We believe that everyone deserves access to high-quality electronics that enhance their daily lives and work.
+        <ScrollReveal delay={120}>
+          <div className="surface-card h-full p-8">
+            <ShieldCheckIcon className="h-9 w-9 text-primary" />
+            <h3 className="mt-8 text-2xl font-black tracking-tight text-foreground">More than a static storefront.</h3>
+            <p className="mt-4 text-sm font-medium leading-7 text-muted-foreground">
+              The site runs on a Next.js storefront, an Express REST API, MongoDB, Passport with JWT, Redis caching, and Socket.IO. That gives the store real accounts, product management, carts, orders, and admin tools without making the customer side feel heavy.
             </p>
           </div>
-          <div>
-            <h2 className="text-2xl font-semibold mb-4">Our Vision</h2>
-            <p className="text-gray-600">
-              We envision a world where technology seamlessly integrates into people's lives, making everyday tasks more efficient and enjoyable. Through carefully curated products and exceptional service, we aim to be at the forefront of this technological evolution.
-            </p>
-          </div>
-        </div>
-
-        <div className="bg-gray-50 rounded-lg p-8 mb-16">
-          <h2 className="text-2xl font-semibold mb-6 text-center">Why Choose Tekron?</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="text-center">
-              <h3 className="text-xl font-semibold mb-3">Quality Products</h3>
-              <p className="text-gray-600">
-                We carefully select each product to ensure the highest quality and reliability.
-              </p>
-            </div>
-            <div className="text-center">
-              <h3 className="text-xl font-semibold mb-3">Expert Support</h3>
-              <p className="text-gray-600">
-                Our team of tech experts is always ready to help you make the right choice.
-              </p>
-            </div>
-            <div className="text-center">
-              <h3 className="text-xl font-semibold mb-3">Fast Shipping</h3>
-              <p className="text-gray-600">
-                Get your products delivered quickly and securely to your doorstep.
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="text-center">
-          <h2 className="text-2xl font-semibold mb-6">Our Story</h2>
-          <p className="text-gray-600 max-w-3xl mx-auto">
-            Tekron was founded in 2024 with a simple idea: to make premium technology accessible to everyone. What started as a small online store has grown into a trusted destination for tech enthusiasts and professionals alike. We continue to expand our product range while maintaining our commitment to quality and customer satisfaction.
-          </p>
-        </div>
+        </ScrollReveal>
       </div>
-    </div>
-  )
-} 
+
+      <div className="mt-6 grid grid-cols-1 gap-5 md:grid-cols-3">
+        <ScrollReveal delay={0}>
+          <FeatureCard icon={SparklesIcon} title="Focused catalog" description="Apple products grouped by real buying categories, with pricing and specs easy to scan." />
+        </ScrollReveal>
+        <ScrollReveal delay={100}>
+          <FeatureCard icon={UserGroupIcon} title="Useful accounts" description="Customers can save carts, place orders, and return later to check what happened." />
+        </ScrollReveal>
+        <ScrollReveal delay={200}>
+          <FeatureCard icon={GlobeAltIcon} title="Room to grow" description="The backend is separated into routes, controllers, services, repositories, cache, and admin tools." />
+        </ScrollReveal>
+      </div>
+    </PageShell>
+  );
+}

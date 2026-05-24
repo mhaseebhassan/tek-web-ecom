@@ -4,8 +4,8 @@ import { useMemo, useState } from 'react';
 import OrderStatusControl from '@/components/admin/OrderStatusControl';
 import { TruckIcon, ClockIcon, CheckCircleIcon, XCircleIcon } from '@heroicons/react/24/outline';
 
-const ORDER_STATUSES = ['all', 'pending', 'processing', 'shipped', 'delivered', 'cancelled'];
-const PAYMENT_STATUSES = ['all', 'pending', 'completed', 'failed'];
+const ORDER_STATUSES = ['all', 'pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled'];
+const PAYMENT_STATUSES = ['all', 'pending', 'completed', 'failed', 'refunded'];
 
 export default function OrdersTableClient({ orders }) {
   const [query, setQuery] = useState('');
@@ -24,8 +24,8 @@ export default function OrdersTableClient({ orders }) {
       }
 
       const orderId = order.id.slice(-6).toLowerCase();
-      const customerName = (order.user?.name || 'guest').toLowerCase();
-      const customerEmail = (order.user?.email || '').toLowerCase();
+      const customerName = (order.user?.name || order.guestCustomer?.name || 'guest').toLowerCase();
+      const customerEmail = (order.user?.email || order.guestCustomer?.email || '').toLowerCase();
       const itemNames = order.items
         .map((item) => item.product?.name || '')
         .join(' ')
@@ -47,21 +47,22 @@ export default function OrdersTableClient({ orders }) {
     <div className="space-y-6">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div className="flex-1">
-          <label className="text-xs font-semibold uppercase tracking-widest text-slate-400">Search orders</label>
+          <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Search orders</label>
           <input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            className="mt-2 w-full rounded-2xl border border-amber-100 bg-white px-4 py-3 text-sm font-medium text-slate-700 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
+            className="input-field mt-2"
             placeholder="Search by order ID, customer, or product"
           />
         </div>
         <div className="flex flex-wrap gap-3">
           <div>
-            <label className="text-xs font-semibold uppercase tracking-widest text-slate-400">Status</label>
+            <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Status</label>
             <select
               value={statusFilter}
               onChange={(event) => setStatusFilter(event.target.value)}
-              className="mt-2 w-full rounded-2xl border border-amber-100 bg-white px-3 py-3 text-xs font-semibold uppercase tracking-widest text-slate-700 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
+              className="select-field mt-2 w-full appearance-none pr-10 text-xs uppercase tracking-widest"
+              style={{ backgroundImage: 'url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%236b7280%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E")', backgroundRepeat: 'no-repeat', backgroundPosition: 'right 1rem top 50%', backgroundSize: '0.65rem auto' }}
             >
               {ORDER_STATUSES.map((status) => (
                 <option key={status} value={status}>
@@ -71,11 +72,12 @@ export default function OrdersTableClient({ orders }) {
             </select>
           </div>
           <div>
-            <label className="text-xs font-semibold uppercase tracking-widest text-slate-400">Payment</label>
+            <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Payment</label>
             <select
               value={paymentFilter}
               onChange={(event) => setPaymentFilter(event.target.value)}
-              className="mt-2 w-full rounded-2xl border border-amber-100 bg-white px-3 py-3 text-xs font-semibold uppercase tracking-widest text-slate-700 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
+              className="select-field mt-2 w-full appearance-none pr-10 text-xs uppercase tracking-widest"
+              style={{ backgroundImage: 'url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%236b7280%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E")', backgroundRepeat: 'no-repeat', backgroundPosition: 'right 1rem top 50%', backgroundSize: '0.65rem auto' }}
             >
               {PAYMENT_STATUSES.map((status) => (
                 <option key={status} value={status}>
@@ -87,27 +89,27 @@ export default function OrdersTableClient({ orders }) {
         </div>
       </div>
 
-      <div className="glass-panel rounded-[2.5rem] shadow-xl shadow-teal-500/10 border border-amber-200/60 overflow-hidden">
-        <div className="px-8 py-6 border-b border-amber-200/60 flex items-center justify-between bg-amber-100/40">
-          <h2 className="text-xl font-bold text-slate-900">Latest Orders</h2>
-          <span className="text-xs font-bold uppercase tracking-widest text-slate-500">{filteredOrders.length} shown</span>
+      <div className="table-panel">
+        <div className="px-8 py-6 border-b border-white/10 flex items-center justify-between bg-white/[0.055]">
+          <h2 className="text-xl font-bold text-foreground">Latest Orders</h2>
+          <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground bg-muted px-3 py-1 rounded-full">{filteredOrders.length} shown</span>
         </div>
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-amber-200/60">
-            <thead className="bg-amber-100/40">
+          <table className="min-w-full divide-y divide-white/10">
+            <thead className="table-head">
               <tr>
-                <th className="px-8 py-4 text-left text-xs font-bold uppercase tracking-widest text-slate-500">Order</th>
-                <th className="px-8 py-4 text-left text-xs font-bold uppercase tracking-widest text-slate-500">Customer</th>
-                <th className="px-8 py-4 text-left text-xs font-bold uppercase tracking-widest text-slate-500">Items</th>
-                <th className="px-8 py-4 text-left text-xs font-bold uppercase tracking-widest text-slate-500">Total</th>
-                <th className="px-8 py-4 text-left text-xs font-bold uppercase tracking-widest text-slate-500">Status</th>
-                <th className="px-8 py-4 text-left text-xs font-bold uppercase tracking-widest text-slate-500">Actions</th>
+                <th className="px-8 py-4 text-left">Order</th>
+                <th className="px-8 py-4 text-left">Customer</th>
+                <th className="px-8 py-4 text-left">Items</th>
+                <th className="px-8 py-4 text-left">Total</th>
+                <th className="px-8 py-4 text-left">Status</th>
+                <th className="px-8 py-4 text-left">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-amber-100/60">
+            <tbody className="divide-y divide-white/10">
               {filteredOrders.length === 0 ? (
                 <tr>
-                  <td colSpan="6" className="px-8 py-12 text-center text-slate-400 font-medium">
+                  <td colSpan="6" className="px-8 py-12 text-center text-muted-foreground font-medium">
                     No orders found.
                   </td>
                 </tr>
@@ -115,20 +117,20 @@ export default function OrdersTableClient({ orders }) {
                 filteredOrders.map((order) => {
                   const itemCount = order.items.reduce((sum, item) => sum + item.quantity, 0);
                   return (
-                    <tr key={order.id} className="hover:bg-amber-50/40 transition-colors">
-                      <td className="px-8 py-5 text-sm font-bold text-slate-900">#{order.id.slice(-6).toUpperCase()}</td>
-                      <td className="px-8 py-5 text-sm text-slate-600">
-                        <div className="font-semibold text-slate-800">{order.user?.name || 'Guest'}</div>
-                        <div className="text-xs text-slate-400">{order.user?.email || 'No email'}</div>
+                    <tr key={order.id} className="table-row">
+                      <td className="px-8 py-5 text-sm font-bold text-foreground">#{order.id.slice(-6).toUpperCase()}</td>
+                      <td className="px-8 py-5 text-sm text-muted-foreground">
+                        <div className="font-semibold text-foreground">{order.user?.name || order.guestCustomer?.name || 'Guest'}</div>
+                        <div className="text-xs text-muted-foreground/80 mt-0.5">{order.user?.email || order.guestCustomer?.email || 'No email'}</div>
                       </td>
-                      <td className="px-8 py-5 text-sm text-slate-600">
-                        <div className="font-semibold">{itemCount} items</div>
-                        <div className="text-xs text-slate-400">
+                      <td className="px-8 py-5 text-sm text-muted-foreground">
+                        <div className="font-semibold text-foreground">{itemCount} items</div>
+                        <div className="text-xs text-muted-foreground/80 mt-0.5">
                           {order.items.map((item) => item.product?.name).filter(Boolean).slice(0, 2).join(', ')}
                           {order.items.length > 2 ? '...' : ''}
                         </div>
                       </td>
-                      <td className="px-8 py-5 text-sm font-bold text-slate-900">{currency.format(order.totalAmount)}</td>
+                      <td className="px-8 py-5 text-sm font-bold text-foreground">{currency.format(order.totalAmount)}</td>
                       <td className="px-8 py-5">
                         <div className={`label flex items-center gap-1 ${order.status === 'delivered'
                           ? 'label-emerald'

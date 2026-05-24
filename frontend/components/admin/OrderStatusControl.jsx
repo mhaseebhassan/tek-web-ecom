@@ -1,16 +1,18 @@
 'use client';
 
 import { useState } from 'react';
+import api from '@/lib/api';
 
 const ORDER_STATUSES = [
   'pending',
+  'confirmed',
   'processing',
   'shipped',
   'delivered',
   'cancelled',
 ];
 
-const PAYMENT_STATUSES = ['pending', 'completed', 'failed'];
+const PAYMENT_STATUSES = ['pending', 'completed', 'failed', 'refunded'];
 
 export default function OrderStatusControl({ orderId, initialStatus, initialPaymentStatus }) {
   const [status, setStatus] = useState(initialStatus);
@@ -23,20 +25,11 @@ export default function OrderStatusControl({ orderId, initialStatus, initialPaym
     setMessage('');
 
     try {
-      const response = await fetch(`/api/admin/orders/${orderId}` , {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status, paymentStatus }),
-      });
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data?.error || 'Failed to update order');
-      }
+      await api.patch(`/admin/orders/${orderId}`, { status, paymentStatus });
 
       setMessage('Updated');
     } catch (error) {
-      setMessage(error.message);
+      setMessage(error.data?.message || error.message || 'Failed to update order');
     } finally {
       setIsSaving(false);
       setTimeout(() => setMessage(''), 3000);
@@ -49,10 +42,11 @@ export default function OrderStatusControl({ orderId, initialStatus, initialPaym
         <select
           value={status}
           onChange={(event) => setStatus(event.target.value)}
-          className="rounded-2xl border border-amber-200/60 bg-white/80 px-3 py-2 text-xs font-semibold uppercase tracking-widest text-slate-700 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
+          className="select-field cursor-pointer appearance-none px-3 py-2 pr-8 text-xs uppercase tracking-widest"
+          style={{ backgroundImage: 'url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%236b7280%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E")', backgroundRepeat: 'no-repeat', backgroundPosition: 'right 0.7rem top 50%', backgroundSize: '0.65rem auto' }}
         >
           {ORDER_STATUSES.map((option) => (
-            <option key={option} value={option}>
+            <option key={option} value={option} className="bg-background text-foreground">
               {option}
             </option>
           ))}
@@ -60,10 +54,11 @@ export default function OrderStatusControl({ orderId, initialStatus, initialPaym
         <select
           value={paymentStatus}
           onChange={(event) => setPaymentStatus(event.target.value)}
-          className="rounded-2xl border border-amber-200/60 bg-white/80 px-3 py-2 text-xs font-semibold uppercase tracking-widest text-slate-700 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
+          className="select-field cursor-pointer appearance-none px-3 py-2 pr-8 text-xs uppercase tracking-widest"
+          style={{ backgroundImage: 'url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%236b7280%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E")', backgroundRepeat: 'no-repeat', backgroundPosition: 'right 0.7rem top 50%', backgroundSize: '0.65rem auto' }}
         >
           {PAYMENT_STATUSES.map((option) => (
-            <option key={option} value={option}>
+            <option key={option} value={option} className="bg-background text-foreground">
               {option}
             </option>
           ))}
@@ -72,13 +67,13 @@ export default function OrderStatusControl({ orderId, initialStatus, initialPaym
           type="button"
           onClick={handleSave}
           disabled={isSaving}
-          className="rounded-2xl bg-primary px-4 py-2 text-xs font-semibold uppercase tracking-widest text-white shadow-sm transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-70"
+          className="btn-primary px-4 py-2 text-xs uppercase tracking-widest"
         >
           {isSaving ? 'Saving' : 'Save'}
         </button>
       </div>
       {message ? (
-        <span className={`text-xs font-semibold ${message === 'Updated' ? 'text-emerald-600' : 'text-rose-600'}`}>
+        <span className={`label self-start ${message === 'Updated' ? 'label-emerald' : 'label-rose'}`}>
           {message}
         </span>
       ) : null}

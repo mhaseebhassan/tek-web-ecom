@@ -6,17 +6,25 @@ const seedAdmin = async () => {
   try {
     await mongoose.connect(process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/tekron');
 
-    const adminExists = await User.findOne({ email: 'admin@tekron.com' });
+    const email = process.env.SEED_ADMIN_EMAIL || 'admin@tekron.com';
+    const password = process.env.SEED_ADMIN_PASSWORD || 'Admin@12345';
+    const name = process.env.SEED_ADMIN_NAME || 'Tekron Admin';
+
+    const adminExists = await User.findOne({ email });
 
     if (adminExists) {
+      adminExists.name = name;
+      adminExists.role = 'admin';
+      adminExists.isActive = true;
+      await adminExists.save();
       console.log('Admin user already exists!');
       process.exit(0);
     }
 
     await User.create({
-      name: 'Admin User',
-      email: 'admin@tekron.com',
-      password: 'Admin@12345',
+      name,
+      email,
+      password,
       role: 'admin',
     });
 

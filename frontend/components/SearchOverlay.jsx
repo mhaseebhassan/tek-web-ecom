@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { MagnifyingGlassIcon, XMarkIcon } from '@heroicons/react/24/outline';
-import Image from 'next/image';
+import { MagnifyingGlassIcon, XMarkIcon, ArrowRightIcon } from '@heroicons/react/24/outline';
+import SafeImage from '@/components/SafeImage';
 import Link from 'next/link';
+import { getProductImage, loadCatalogProducts } from '@/lib/products';
 
 export default function SearchOverlay({ isOpen, onClose }) {
   const [query, setQuery] = useState('');
@@ -15,7 +16,9 @@ export default function SearchOverlay({ isOpen, onClose }) {
       inputRef.current?.focus();
       document.body.style.overflow = 'hidden';
     } else {
-      document.body.style.overflow = 'auto';
+      document.body.style.overflow = '';
+      setQuery('');
+      setResults([]);
     }
   }, [isOpen]);
 
@@ -27,120 +30,87 @@ export default function SearchOverlay({ isOpen, onClose }) {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [onClose]);
 
-  // Fetch products from API
   useEffect(() => {
-    const fetchProducts = async () => {
-      if (query.length > 1) {
-        try {
-          const response = await fetch('/api/products');
-          if (response.ok) {
-            const products = await response.json();
-            const filtered = products.filter(p => 
-              p.name.toLowerCase().includes(query.toLowerCase()) ||
-              p.category.toLowerCase().includes(query.toLowerCase())
-            );
-            setResults(filtered);
-          }
-        } catch (error) {
-          console.error('Search fetch error:', error);
-        }
-      } else {
+    const run = async () => {
+      if (query.trim().length < 2) {
         setResults([]);
+        return;
       }
+      const products = await loadCatalogProducts();
+      const normalized = query.toLowerCase();
+      setResults(
+        products.filter(
+          (p) =>
+            p.name?.toLowerCase().includes(normalized) ||
+            p.category?.toLowerCase().includes(normalized)
+        )
+      );
     };
-
-    const debounceTimer = setTimeout(fetchProducts, 300);
-    return () => clearTimeout(debounceTimer);
+    const t = setTimeout(run, 220);
+    return () => clearTimeout(t);
   }, [query]);
 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-start justify-center pt-24 px-4 sm:px-6">
-      <div 
-        className="absolute inset-0 bg-slate-900/60 backdrop-blur-xl transition-opacity animate-in fade-in duration-500"
-        onClick={onClose}
-      />
-      
-      <div className="relative w-full max-w-2xl bg-white/80 backdrop-blur-3xl rounded-[2.5rem] shadow-[0_32px_128px_rgba(0,0,0,0.2)] border border-white/50 overflow-hidden transform transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)] animate-in zoom-in-95 mt-4">
-        <div className="p-6 flex items-center gap-6 border-b border-slate-100/50">
-          <div className="w-12 h-12 bg-teal-50 rounded-2xl flex items-center justify-center shadow-inner">
-            <MagnifyingGlassIcon className="w-6 h-6 text-teal-600" />
+    <div className="fixed inset-0 z-[100] flex items-start justify-center px-4 pt-20 animate-fade-up md:pt-28">
+      <button className="absolute inset-0 bg-primary/[0.35] backdrop-blur-md" onClick={onClose} aria-label="Close search" />
+
+      <div className="surface-panel relative w-full max-w-2xl overflow-hidden animate-scale-in">
+        <div className="flex items-center gap-4 border-b border-border/70 p-4 sm:p-5">
+          <div className="grid h-11 w-11 shrink-0 place-items-center rounded-lg bg-primary text-primary-foreground">
+            <MagnifyingGlassIcon className="h-5 w-5" />
           </div>
           <input
             ref={inputRef}
-            type="text"
-            placeholder="What are you looking for?"
-            className="flex-1 bg-transparent border-none outline-none text-xl font-bold text-slate-900 placeholder:text-slate-300 tracking-tight"
+            type="search"
+            placeholder="Search products and categories"
+            className="min-w-0 flex-1 border-none bg-transparent text-lg font-extrabold text-foreground outline-none placeholder:text-muted-foreground"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
-          <button 
-            onClick={onClose}
-            className="p-3 hover:bg-rose-50 rounded-full transition-all group active:scale-90"
-          >
-            <XMarkIcon className="w-6 h-6 text-slate-400 group-hover:text-rose-500 transition-colors" />
+          <button type="button" onClick={onClose} className="icon-button border-transparent bg-muted/50" aria-label="Close search">
+            <XMarkIcon className="h-5 w-5" />
           </button>
         </div>
 
-        <div className="max-h-[60vh] overflow-y-auto p-4 custom-scrollbar">
-          {query.length <= 1 ? (
-            <div className="py-20 text-center">
-              <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-6 opacity-40">
-                <MagnifyingGlassIcon className="w-10 h-10 text-slate-400" />
-              </div>
-              <p className="text-xs font-black uppercase tracking-[0.2em] text-slate-400">Search Tekron Universe</p>
-              <p className="text-sm mt-3 text-slate-500 font-medium">Find the latest in premium tech and lifestyle.</p>
+        <div className="custom-scrollbar max-h-[54vh] overflow-y-auto p-3">
+          {query.length < 2 ? (
+            <div className="py-14 text-center">
+              <p className="text-xs font-black uppercase tracking-[0.18em] text-muted-foreground">Quick search</p>
+              <p className="mt-2 text-sm font-medium text-muted-foreground">Type at least 2 characters.</p>
             </div>
           ) : results.length > 0 ? (
-            <div className="grid gap-2">
+            <div className="space-y-2">
               {results.map((product) => (
-                <Link 
-                  key={product.id}
+                <Link
+                  key={product.id || product._id}
                   href={`/products/${product.slug}`}
                   onClick={onClose}
-                  className="flex items-center gap-5 p-4 rounded-3xl hover:bg-white transition-all border border-transparent hover:border-white hover:shadow-xl hover:shadow-slate-200/50 group"
+                  className="group flex items-center gap-4 rounded-[1.1rem] border border-transparent p-3 transition-smooth hover:border-border/70 hover:bg-muted/[0.35]"
                 >
-                  <div className="w-20 h-20 relative bg-slate-50 rounded-2xl overflow-hidden shrink-0 shadow-inner group-hover:scale-105 transition-transform duration-500">
-                    <Image src={product.image} alt={product.name} fill className="object-contain p-3" />
+                  <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-lg bg-muted/50">
+                    <SafeImage src={getProductImage(product)} alt={product.name} fill className="object-contain p-2" sizes="64px" />
                   </div>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-[10px] font-black uppercase tracking-widest text-teal-600 bg-teal-50 px-2 py-0.5 rounded-full">{product.category}</span>
-                    </div>
-                    <h4 className="font-black text-slate-900 text-lg leading-tight group-hover:text-teal-700 transition-colors">{product.name}</h4>
-                    <p className="text-xs text-slate-400 font-medium mt-1">Available Now</p>
+                  <div className="min-w-0 flex-1">
+                    {product.category && <span className="label label-primary">{product.category}</span>}
+                    <h4 className="mt-1 truncate text-sm font-black text-foreground transition-smooth group-hover:text-accent">
+                      {product.name}
+                    </h4>
                   </div>
-                  <div className="text-right">
-                    <p className="font-black text-slate-900 text-xl tracking-tighter">${product.price}</p>
-                    <div className="flex items-center justify-end gap-1 mt-1">
-                      <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.4)]" />
-                      <p className="text-[9px] font-black text-emerald-600 uppercase tracking-widest">In Stock</p>
-                    </div>
-                  </div>
+                  <p className="hidden text-sm font-black text-foreground sm:block">${Number(product.price).toLocaleString()}</p>
+                  <ArrowRightIcon className="h-4 w-4 text-muted-foreground transition-smooth group-hover:text-foreground" />
                 </Link>
               ))}
             </div>
           ) : (
-            <div className="py-20 text-center text-slate-400">
-              <p className="text-sm font-bold">We couldn't find anything for "{query}"</p>
-              <p className="text-xs mt-2 font-medium opacity-60">Try searching for a category like "Laptops"</p>
-            </div>
+            <p className="py-14 text-center text-sm font-semibold text-muted-foreground">No results for "{query}"</p>
           )}
         </div>
 
-        <div className="p-5 bg-slate-50/80 backdrop-blur-md flex justify-between items-center text-[10px] font-black uppercase tracking-[0.15em] text-slate-400 border-t border-slate-100/50">
-          <div className="flex gap-6">
-            <span className="flex items-center gap-2">
-              <kbd className="bg-white px-2 py-1 rounded-lg border border-slate-200 shadow-sm text-slate-600 font-black">ENT</kbd> 
-              to select
-            </span>
-            <span className="flex items-center gap-2">
-              <kbd className="bg-white px-2 py-1 rounded-lg border border-slate-200 shadow-sm text-slate-600 font-black">ESC</kbd> 
-              to close
-            </span>
-          </div>
-          <span className="text-teal-600/60">Tekron Intelligence</span>
+        <div className="flex justify-between border-t border-border/70 px-5 py-3 text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">
+          <span>Enter opens result</span>
+          <span>Esc closes</span>
         </div>
       </div>
     </div>

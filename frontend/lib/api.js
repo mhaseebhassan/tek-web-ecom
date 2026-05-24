@@ -2,104 +2,103 @@ import Cookies from 'js-cookie';
 
 const baseURL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000/api/v1';
 
-async function fetchWithInterceptor(endpoint, options = {}) {
-  // Setup headers
+class ApiError extends Error {
+  constructor(message, status, data) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+    this.data = data;
+    this.response = { data, status };
+  }
+}
+
+const getPayload = (json) => json?.data ?? json;
+
+async function fetchWithAuth(endpoint, options = {}, retry = false) {
   const headers = new Headers(options.headers || {});
-  
+
   if (!headers.has('Content-Type') && !(options.body instanceof FormData)) {
     headers.set('Content-Type', 'application/json');
   }
 
-  // Attach access token if available
   const token = Cookies.get('accessToken');
   if (token) {
     headers.set('Authorization', `Bearer ${token}`);
   }
 
-  // Configuration for native fetch
   const config = {
     ...options,
     headers,
-    credentials: 'include', // Ensure HTTP-only cookies (refresh token) are sent
+    credentials: 'include',
   };
 
   const url = `${baseURL}${endpoint}`;
+  let response = await fetch(url, config);
 
-  try {
-    let response = await fetch(url, config);
+  if (response.status === 401 && !retry && !endpoint.includes('/auth/refresh-token')) {
+    const refreshResponse = await fetch(`${baseURL}/auth/refresh-token`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+    });
 
-    // Handle 401 Unauthorized - attempt token refresh
-    if (response.status === 401 && !config._retry) {
-      config._retry = true;
+    if (refreshResponse.ok) {
+      const refreshJson = await refreshResponse.json();
+      const payload = getPayload(refreshJson);
+      const newAccessToken = payload?.accessToken;
 
-      try {
-        const refreshResponse = await fetch(`${baseURL}/auth/refresh-token`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include'
+      if (newAccessToken) {
+        Cookies.set('accessToken', newAccessToken, {
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'lax',
         });
-
-        if (!refreshResponse.ok) {
-          throw new Error('Refresh failed');
-        }
-
-        const refreshData = await refreshResponse.json();
-        const newAccessToken = refreshData.accessToken;
-        
-        if (newAccessToken) {
-          Cookies.set('accessToken', newAccessToken, { secure: false, sameSite: 'lax' });
-          headers.set('Authorization', `Bearer ${newAccessToken}`);
-          
-          // Re-create the request with new headers
-          const retryConfig = { ...config, headers };
-          
-          // Retry the original request
-          response = await fetch(url, retryConfig);
-        } else {
-          throw new Error('No access token in refresh response');
-        }
-      } catch (refreshError) {
-        Cookies.remove('accessToken');
-        // Reject in an Axios-like error structure
-        return Promise.reject({
-          response: { data: { message: 'Session expired. Please log in again.' } }
-        });
+        return fetchWithAuth(endpoint, options, true);
       }
     }
 
-    // Process the final response
-    let data;
-    const contentType = response.headers.get('content-type');
-    if (contentType && contentType.includes('application/json')) {
-      data = await response.json();
-    } else {
-      data = await response.text();
+    Cookies.remove('accessToken');
+    if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/auth/')) {
+      window.location.href = '/auth/login';
     }
-
-    if (!response.ok) {
-      // Mimic Axios error structure for components
-      return Promise.reject({ response: { data, status: response.status } });
-    }
-
-    // Mimic Axios success structure
-    return { data, status: response.status };
-
-  } catch (err) {
-    if (err.response) {
-      return Promise.reject(err);
-    }
-    // Network or other error
-    return Promise.reject({
-      response: { data: { message: err.message || 'An unknown network error occurred.' } }
-    });
+    throw new ApiError('Session expired. Please log in again.', 401, { message: 'Session expired' });
   }
+
+  const contentType = response.headers.get('content-type');
+  const json = contentType?.includes('application/json') ? await response.json() : null;
+
+  if (!response.ok) {
+    throw new ApiError(json?.message || 'Request failed', response.status, json);
+  }
+
+  return {
+    data: json,
+    payload: getPayload(json),
+    status: response.status,
+  };
 }
 
 const api = {
-  get: (endpoint, options = {}) => fetchWithInterceptor(endpoint, { ...options, method: 'GET' }),
-  post: (endpoint, body, options = {}) => fetchWithInterceptor(endpoint, { ...options, method: 'POST', body: JSON.stringify(body) }),
-  put: (endpoint, body, options = {}) => fetchWithInterceptor(endpoint, { ...options, method: 'PUT', body: JSON.stringify(body) }),
-  delete: (endpoint, options = {}) => fetchWithInterceptor(endpoint, { ...options, method: 'DELETE' })
+  get: (endpoint, options = {}) => fetchWithAuth(endpoint, { ...options, method: 'GET' }),
+  post: (endpoint, body, options = {}) =>
+    fetchWithAuth(endpoint, {
+      ...options,
+      method: 'POST',
+      body: body instanceof FormData ? body : JSON.stringify(body),
+    }),
+  put: (endpoint, body, options = {}) =>
+    fetchWithAuth(endpoint, {
+      ...options,
+      method: 'PUT',
+      body: body instanceof FormData ? body : JSON.stringify(body),
+    }),
+  patch: (endpoint, body, options = {}) =>
+    fetchWithAuth(endpoint, {
+      ...options,
+      method: 'PATCH',
+      body: body instanceof FormData ? body : JSON.stringify(body),
+    }),
+  delete: (endpoint, options = {}) => fetchWithAuth(endpoint, { ...options, method: 'DELETE' }),
 };
 
 export default api;
+export { ApiError, getPayload };

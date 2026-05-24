@@ -1,26 +1,27 @@
-import { Sora } from 'next/font/google';
+import { Plus_Jakarta_Sans } from 'next/font/google';
 import './globals.css';
 import Providers from './providers';
-
 import { CartProvider } from '@/context/CartContext';
+import CartDrawer from '@/components/CartDrawer';
 
-const sora = Sora({ subsets: ['latin'], display: 'swap' });
+const jakarta = Plus_Jakarta_Sans({ subsets: ['latin'], display: 'swap' });
 
 export const metadata = {
   title: 'Tekron Store',
-  description: 'Your one-stop shop for all things tech',
+  description: 'Shop Apple devices and accessories at Tekron.',
 };
 
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
-      <body className={sora.className}>
+      <body className={`${jakarta.className} min-h-screen bg-background text-foreground antialiased`}>
         <Providers>
           <CartProvider>
             {children}
+            <CartDrawer />
           </CartProvider>
         </Providers>
       </body>
     </html>
   );
-} 
+}

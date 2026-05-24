@@ -1,110 +1,67 @@
-const Product = require('../models/product.model');
 const asyncHandler = require('../middlewares/async.middleware');
 const ApiError = require('../utils/ApiError');
+const productService = require('../services/product.service');
 const { clearCache } = require('../middlewares/cache.middleware');
 
-const slugify = (value) =>
-  value
-    .toString()
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '');
-
-const normalizeProductPayload = (body) => {
-  const payload = { ...body };
-
-  if (payload.image && !payload.images) {
-    payload.images = [payload.image];
-  }
-
-  if (payload.name && !payload.slug) {
-    payload.slug = slugify(payload.name);
-  }
-
-  if (payload.price !== undefined) {
-    payload.price = Number(payload.price);
-  }
-
-  if (payload.compareAtPrice !== undefined && payload.compareAtPrice !== '') {
-    payload.compareAtPrice = Number(payload.compareAtPrice);
-  }
-
-  if (payload.stock !== undefined) {
-    payload.stock = Number(payload.stock);
-  }
-
-  delete payload.image;
-  return payload;
+const getAvailabilityStatus = (stock) => {
+  if (stock <= 0) return 'out';
+  if (stock <= 5) return 'low';
+  return 'in';
 };
 
-const serializeProduct = (product) => {
-  const plain = product.toObject ? product.toObject() : product;
-  const image = plain.images && plain.images.length > 0 ? plain.images[0] : '';
+const serializeProduct = (product, isAdmin = false) => {
+  const data = typeof product.toObject === 'function' ? product.toObject({ virtuals: true }) : { ...product };
 
+  if (isAdmin) {
+    return data;
+  }
+
+  const { stock, createdBy, ...publicProduct } = data;
   return {
-    ...plain,
-    id: plain._id.toString(),
-    image,
+    ...publicProduct,
+    availabilityStatus: getAvailabilityStatus(stock),
   };
 };
 
-// @desc    Get all products
-// @route   GET /api/v1/products
-// @access  Public
-exports.getProducts = asyncHandler(async (req, res, next) => {
-  const products = await Product.find({ isActive: true }).select('-__v');
-  
+exports.getProducts = asyncHandler(async (req, res) => {
+  const { products, pagination } = await productService.listProducts(req.query);
+  const isAdmin = req.user?.role === 'admin';
+
   res.status(200).json({
     success: true,
     count: products.length,
-    products: products.map(serializeProduct),
+    pagination,
+    products: products.map((product) => serializeProduct(product, isAdmin)),
   });
 });
 
-// @desc    Get single product
-// @route   GET /api/v1/products/:id
-// @access  Public
 exports.getProduct = asyncHandler(async (req, res, next) => {
-  const product = await Product.findById(req.params.id);
+  const product = await productService.getProduct(req.params.id);
 
-  if (!product || !product.isActive) {
+  if (!product) {
     return next(new ApiError(404, 'Product not found'));
   }
 
   res.status(200).json({
     success: true,
-    product: serializeProduct(product),
+    product: serializeProduct(product, req.user?.role === 'admin'),
   });
 });
 
-// @desc    Create new product
-// @route   POST /api/v1/products
-// @access  Private (Admin)
-exports.createProduct = asyncHandler(async (req, res, next) => {
-  const payload = normalizeProductPayload(req.body);
-  payload.createdBy = req.user.id;
-  
-  const product = await Product.create(payload);
+exports.createProduct = asyncHandler(async (req, res) => {
+  const product = await productService.createProduct(req.body, req.user.id);
 
-  // Clear Redis cache for products list
   await clearCache('products_*');
+  await clearCache('admin_dashboard_stats');
 
   res.status(201).json({
     success: true,
-    product: serializeProduct(product),
+    product,
   });
 });
 
-// @desc    Update product
-// @route   PUT /api/v1/products/:id
-// @access  Private (Admin)
 exports.updateProduct = asyncHandler(async (req, res, next) => {
-  const product = await Product.findByIdAndUpdate(
-    req.params.id,
-    normalizeProductPayload(req.body),
-    { new: true, runValidators: true }
-  );
+  const product = await productService.updateProduct(req.params.id, req.body);
 
   if (!product) {
     return next(new ApiError(404, 'Product not found'));
@@ -112,22 +69,16 @@ exports.updateProduct = asyncHandler(async (req, res, next) => {
 
   await clearCache('products_*');
   await clearCache(`product_${req.params.id}`);
+  await clearCache('admin_dashboard_stats');
 
   res.status(200).json({
     success: true,
-    product: serializeProduct(product),
+    product,
   });
 });
 
-// @desc    Soft delete product
-// @route   DELETE /api/v1/products/:id
-// @access  Private (Admin)
 exports.deleteProduct = asyncHandler(async (req, res, next) => {
-  const product = await Product.findByIdAndUpdate(
-    req.params.id,
-    { isActive: false },
-    { new: true }
-  );
+  const product = await productService.deleteProduct(req.params.id);
 
   if (!product) {
     return next(new ApiError(404, 'Product not found'));
@@ -135,6 +86,7 @@ exports.deleteProduct = asyncHandler(async (req, res, next) => {
 
   await clearCache('products_*');
   await clearCache(`product_${req.params.id}`);
+  await clearCache('admin_dashboard_stats');
 
   res.status(200).json({
     success: true,

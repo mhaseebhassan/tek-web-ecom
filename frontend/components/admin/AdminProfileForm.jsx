@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import api from '@/lib/api';
 
 export default function AdminProfileForm() {
   const [formData, setFormData] = useState({ name: '', image: '' });
@@ -10,17 +11,14 @@ export default function AdminProfileForm() {
   useEffect(() => {
     const loadProfile = async () => {
       try {
-        const response = await fetch('/api/admin/profile');
-        if (!response.ok) {
-          return;
-        }
-        const data = await response.json();
+        const response = await api.get('/admin/profile');
+        const data = response.data.profile;
         setFormData({
           name: data?.name || '',
           image: data?.image || '',
         });
       } catch (error) {
-        console.error('Failed to load profile', error);
+        setMessage('Failed to load profile');
       }
     };
 
@@ -38,20 +36,11 @@ export default function AdminProfileForm() {
     setMessage('');
 
     try {
-      const response = await fetch('/api/admin/profile', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
-      });
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data?.error || 'Failed to update profile');
-      }
+      await api.patch('/admin/profile', formData);
 
       setMessage('Profile updated');
     } catch (error) {
-      setMessage(error.message);
+      setMessage(error.data?.message || error.message || 'Failed to update profile');
     } finally {
       setIsSaving(false);
       setTimeout(() => setMessage(''), 3000);
@@ -61,7 +50,7 @@ export default function AdminProfileForm() {
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <div>
-        <label htmlFor="name" className="block text-sm font-semibold text-slate-700">
+        <label htmlFor="name" className="block text-sm font-semibold text-foreground">
           Display name
         </label>
         <input
@@ -70,12 +59,12 @@ export default function AdminProfileForm() {
           type="text"
           value={formData.name}
           onChange={handleChange}
-          className="mt-2 w-full rounded-2xl border border-amber-100 bg-white px-4 py-3 text-sm font-medium text-slate-700 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
+          className="input-field mt-2"
           placeholder="Admin name"
         />
       </div>
       <div>
-        <label htmlFor="image" className="block text-sm font-semibold text-slate-700">
+        <label htmlFor="image" className="block text-sm font-semibold text-foreground">
           Avatar URL
         </label>
         <input
@@ -84,20 +73,20 @@ export default function AdminProfileForm() {
           type="url"
           value={formData.image}
           onChange={handleChange}
-          className="mt-2 w-full rounded-2xl border border-amber-100 bg-white px-4 py-3 text-sm font-medium text-slate-700 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
+          className="input-field mt-2"
           placeholder="https://"
         />
       </div>
-      <div className="flex flex-wrap items-center gap-3">
+      <div className="flex flex-wrap items-center gap-4 pt-2">
         <button
           type="submit"
           disabled={isSaving}
-          className="rounded-2xl bg-primary px-6 py-3 text-xs font-semibold uppercase tracking-widest text-white shadow-sm transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-70"
+          className="btn-primary px-8 py-3 text-xs uppercase tracking-widest"
         >
           {isSaving ? 'Saving' : 'Save changes'}
         </button>
         {message ? (
-          <span className={`text-xs font-semibold ${message === 'Profile updated' ? 'text-emerald-600' : 'text-rose-600'}`}>
+          <span className={`label ${message === 'Profile updated' ? 'label-emerald' : 'label-rose'}`}>
             {message}
           </span>
         ) : null}

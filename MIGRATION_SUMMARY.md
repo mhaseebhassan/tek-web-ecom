@@ -1,59 +1,56 @@
-# MIGRATION SUMMARY
+# Migration Summary — Next.js Monolith → MERN Monorepo
 
-## 1. What was changed
-The monolithic Next.js 14 application was successfully refactored into a clean architecture MERN stack monorepo. The backend logic (previously in `app/api` using Prisma/PostgreSQL) was entirely stripped out and replaced with a robust standalone Express.js backend using MongoDB, Redis, and Socket.IO.
+## What Changed
 
-## 2. What files/folders were created
-- `backend/` directory created with complete Express structure.
-- `backend/src/models/` - Created Mongoose models (User, Product, Order, Cart, Review, RefreshToken, Notification, StoreSettings).
-- `backend/src/controllers/` - Created `auth.controller.js`, `product.controller.js`, `order.controller.js`.
-- `backend/src/routes/` - Created routing files for auth, products, and orders.
-- `backend/src/middlewares/` - Created `auth`, `async`, `error`, `validate`, and `cache` middlewares.
-- `backend/src/sockets/socket.js` - Configured Socket.IO with JWT authentication.
-- `backend/src/utils/generateTokens.js` - JWT handling logic.
-- `backend/src/config/passport.js` - Passport Local Strategy.
-- `.env.example` - Environment variable templates for both ends.
+The project was migrated from a Next.js full-stack app (API routes, Prisma/PostgreSQL, NextAuth) to:
 
-## 3. What files/folders were removed
-- `frontend/app/api/` (Deleted)
-- `frontend/prisma/` (Deleted)
-- `frontend/lib/prisma.js` (Deleted)
-- `frontend/scripts/create-admin.js` (Deleted)
+- **Frontend:** Next.js 14 UI only — calls Express via `NEXT_PUBLIC_API_BASE_URL`
+- **Backend:** Standalone Express API under `/api/v1`
+- **Database:** MongoDB + Mongoose
+- **Auth:** Passport Local + JWT access + HTTP-only refresh cookie rotation
 
-## 4. Dependencies Added
-**Backend:**
-`express`, `mongoose`, `dotenv`, `cors`, `helmet`, `morgan`, `compression`, `passport`, `passport-local`, `jsonwebtoken`, `bcryptjs`, `express-rate-limit`, `cookie-parser`, `joi`, `redis`, `socket.io`, `express-mongo-sanitize`, `nodemon`
+## Dependencies Removed (Frontend)
 
-## 5. Dependencies Removed
-**Frontend:**
-`@auth/prisma-adapter`, `@prisma/client`, `prisma`, `next-auth`, `bcryptjs`
+- `axios` — replaced with native `fetch` in `frontend/lib/api.js`
+- `next-auth` — replaced with `frontend/context/AuthContext.jsx`
+- `@prisma/client`, `prisma` — removed entirely
 
-## 6. How to run frontend
-1. `cd frontend`
-2. `npm install`
-3. `npm run dev`
+## Dependencies Added
 
-## 7. How to run backend
-1. Start MongoDB (`mongod`) and Redis Server locally.
-2. `cd backend`
-3. `npm install`
-4. Copy `.env.example` to `.env` and fill in secrets.
-5. `npm run dev`
+**Backend:** `express`, `mongoose`, `passport`, `passport-local`, `jsonwebtoken`, `redis`, `socket.io`, `helmet`, `joi`, `multer`, `cloudinary`, rate limiting, compression, etc.
 
-## 8. Course concepts covered
-- Separate Express Server
-- MongoDB/Mongoose
-- Passport.js Local Strategy
-- JWT Access & Refresh Tokens
-- Security Middlewares (Helmet, Rate Limiter)
-- Global Error Handling
-- Validation (Joi)
-- Redis Caching
-- WebSockets (Socket.IO)
+**Frontend:** `js-cookie`, `socket.io-client`, `react-hot-toast`
 
-## 9. Remaining limitations or manual steps
-- **Database Seed:** COMPLETE. You can now run `npm run seed:admin` and `npm run seed:products` in the backend directory.
-- **Frontend Refactor Completion:** COMPLETE. The frontend has been successfully migrated to use a custom `AuthContext` and a native fetch wrapper to communicate securely with the Express backend. NextAuth, Prisma, and Axios have been completely removed.
+## Key Files Added
 
-## 10. Exact viva demo flow
-Please read `FINAL_COMPLETION_CHECKLIST.md` for the exact step-by-step instructions on how to demonstrate the architecture, security, caching, and real-time features to your professor to secure maximum marks.
+| Path | Purpose |
+|---|---|
+| `backend/src/app.js` | Express app, middleware, routes |
+| `backend/server.js` | HTTP server + Socket.IO |
+| `backend/src/controllers/*` | MVC controllers |
+| `backend/src/services/*` | Business logic |
+| `backend/src/middlewares/*` | Auth, cache, validation, rate limits |
+| `backend/src/sockets/socket.js` | Real-time events |
+| `frontend/lib/api.js` | Native fetch client with token refresh |
+| `frontend/context/AuthContext.jsx` | Custom auth state |
+
+## Key Files Removed / Disabled
+
+- `frontend/app/api/**` — no Next.js business API routes
+- Prisma schema, migrations, seeds
+- NextAuth configuration and `SessionProvider`
+- PostgreSQL / `DATABASE_URL` usage
+
+## Remaining Limitations (Honest)
+
+- Guest cart uses `localStorage` until login; then syncs to MongoDB cart API
+- Image upload: local disk by default; Cloudinary used only when env vars are set
+- `express-mongo-sanitize` is disabled on Express 5 due to `req.query` immutability; Mongoose casting still applies
+- Selenium tests may need URL/env updates for the new API base URL
+- Payment card fields on checkout are UI-only (no real payment gateway)
+
+## Verification
+
+- No active `axios`, `next-auth`, or `prisma` imports in runtime code
+- `npm run build` succeeds in `frontend/`
+- Backend loads via `require('./src/app')` and serves `/health`

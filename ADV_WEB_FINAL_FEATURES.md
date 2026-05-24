@@ -1,67 +1,115 @@
-# Tekron: Secure Real-Time MERN E-Commerce Platform
+# Advanced Web Technologies — Final Features Map
 
 ## Project Overview
-Tekron is a premium, real-time e-commerce platform built specifically for the Advanced Web Technologies lab final. It features a modern Next.js front-end decoupled from a highly scalable, secure, and fully-featured Express.js/MongoDB back-end. The architecture implements industry-standard REST API patterns, robust JWT-based authentication, real-time WebSocket notifications, and in-memory Redis caching to ensure high performance.
 
-## Technologies Used
+Tekron is a secure real-time MERN e-commerce platform: Next.js 14 frontend, Express.js backend, MongoDB, Redis, Socket.IO, Passport Local authentication, and JWT access/refresh tokens.
 
-| Technology | Purpose |
-|---|---|
-| **Next.js 14** | High-performance React front-end (App Router). |
-| **Express.js** | Scalable Node.js backend framework. |
-| **MongoDB & Mongoose** | NoSQL database and ODM for flexible data modeling. |
-| **Passport.js** | Core authentication middleware (Local Strategy). |
-| **JWT** | Secure access token and refresh token rotation. |
-| **Redis** | In-memory cache for high-speed product catalog retrieval. |
-| **Socket.IO** | Real-time WebSocket event emission for order notifications. |
-| **Helmet & CORS** | HTTP header security and Cross-Origin protections. |
-| **Express Rate Limit** | Protection against brute-force and DDoS attacks. |
-| **Joi** | Request payload validation. |
+## Course Concept Mapping
 
-## Course Concepts Covered
-
-| Course Concept | Implementation in Tekron | File Path |
+| Course Concept | Implementation | File Path |
 |---|---|---|
-| Node.js & Express | Standalone API Server | `backend/server.js`, `backend/src/app.js` |
-| MongoDB & Mongoose | Schemas with validation, indexes | `backend/src/models/` |
-| REST API & MVC | Clean split of routes/controllers | `backend/src/controllers/`, `backend/src/routes/` |
-| Passport Local Auth | Email/Password hashing and strategy | `backend/src/config/passport.js` |
-| JWT Access/Refresh | Secure token rotation and cookies | `backend/src/utils/generateTokens.js` |
-| OWASP Security | Sanitization, HTTP-only cookies | `backend/src/app.js`, `auth.controller.js` |
-| Security Middleware | Helmet, CORS, Rate Limiter | `backend/src/app.js` |
-| Async Middleware | `asyncHandler` wrapper | `backend/src/middlewares/async.middleware.js` |
-| Global Error Handler | Custom `ApiError` class and middleware | `backend/src/middlewares/error.middleware.js` |
-| Redis Cache | Factory middleware for intercepting `res.json` | `backend/src/middlewares/cache.middleware.js` |
-| Socket.IO | WebSockets for new order notifications | `backend/src/sockets/socket.js`, `order.controller.js` |
+| Node.js & Express | Standalone API server | `backend/server.js`, `backend/src/app.js` |
+| MongoDB & Mongoose | Schemas, indexes, validation | `backend/src/models/` |
+| REST API & MVC | Routes → controllers → services | `backend/src/routes/`, `controllers/`, `services/` |
+| Passport Local Auth | Email/password strategy | `backend/src/config/passport.js` |
+| JWT access + refresh | Short access token + rotated HTTP-only cookie | `backend/src/utils/generateTokens.js` |
+| Role-based authorization | `authorizeRoles` factory | `backend/src/middlewares/auth.middleware.js` |
+| Helmet & CORS | Security headers + whitelist | `backend/src/app.js` |
+| Rate limiting | Global + auth limiters | `backend/src/middlewares/rateLimit.middleware.js` |
+| Async middleware | `asyncHandler` wrapper | `backend/src/middlewares/async.middleware.js` |
+| Validation middleware | Joi + `validate(schema)` factory | `backend/src/middlewares/validate.middleware.js` |
+| Conditional middleware | `conditionalMiddleware` factory | `backend/src/middlewares/conditional.middleware.js` |
+| Global error handler | `ApiError` + `errorHandler` | `backend/src/middlewares/error.middleware.js` |
+| Redis cache | `cache()` middleware + invalidation | `backend/src/middlewares/cache.middleware.js` |
+| Socket.IO | JWT auth, user/admin rooms | `backend/src/sockets/socket.js` |
+| Native fetch client | No Axios | `frontend/lib/api.js` |
+| Custom auth UI | Auth context | `frontend/context/AuthContext.jsx` |
 
-## Backend Architecture
-The backend follows strict **Clean Architecture / MVC Patterns**:
-1. **Routes (`src/routes`):** Defines the endpoints and applies middlewares (Validation, Auth, Cache).
-2. **Controllers (`src/controllers`):** Handles HTTP requests, extracts parameters, and calls business logic.
-3. **Models (`src/models`):** Mongoose schemas defining the database layer.
-4. **Middlewares (`src/middlewares`):** Reusable functions for authentication, global error handling, and Redis caching.
+## API Routes (Implemented)
 
-## API Routes Overview
-- `POST /api/v1/auth/register` - Register a new user
-- `POST /api/v1/auth/login` - Authenticate user (Passport Local)
-- `POST /api/v1/auth/refresh-token` - Generate new access token using httpOnly cookie
-- `GET /api/v1/products` - Fetch product catalog (Redis Cached)
-- `POST /api/v1/orders` - Place order (Emits Socket.IO event)
+### Auth — `backend/src/routes/auth.routes.js`
+
+- `POST /api/v1/auth/register`
+- `POST /api/v1/auth/login` (Passport Local)
+- `POST /api/v1/auth/refresh-token`
+- `POST /api/v1/auth/logout`
+- `GET /api/v1/auth/me`
+- `PATCH /api/v1/auth/profile`
+
+### Products — `backend/src/routes/product.routes.js`
+
+- `GET /api/v1/products` (Redis cached)
+- `GET /api/v1/products/:id`
+- `POST|PUT|DELETE /api/v1/products/:id` (admin)
+
+### Cart — `backend/src/routes/cart.routes.js`
+
+- `GET /api/v1/cart`
+- `POST /api/v1/cart/items`
+- `PATCH /api/v1/cart/items`
+- `DELETE /api/v1/cart/items/:productId`
+- `DELETE /api/v1/cart`
+
+### Orders — `backend/src/routes/order.routes.js`
+
+- `POST /api/v1/orders` (server recalculates totals, emits Socket.IO)
+- `GET /api/v1/orders`
+- `GET /api/v1/orders/:id`
+- `PATCH /api/v1/orders/:id/cancel`
+
+### Admin — `backend/src/routes/admin.routes.js`
+
+- `GET /api/v1/admin/dashboard` (includes low-stock list)
+- `GET /api/v1/admin/orders`
+- `PATCH /api/v1/admin/orders/:id`
+- `GET /api/v1/admin/customers`
+- `GET /api/v1/admin/analytics`
+- Store settings & profile endpoints
+
+### Reviews — `backend/src/routes/review.routes.js`
+
+- `GET /api/v1/reviews/product/:productId`
+- `POST /api/v1/reviews/product/:productId` (must have ordered product)
+- `PATCH|DELETE /api/v1/reviews/:id`
+
+### Notifications — `backend/src/routes/notification.routes.js`
+
+- `GET /api/v1/notifications`
+- `PATCH /api/v1/notifications/:id/read`
+- `PATCH /api/v1/notifications/read-all`
+
+### Upload — `backend/src/routes/upload.routes.js`
+
+- `POST /api/v1/upload` (admin, multipart `image`)
 
 ## Redis Cache Demo
-1. Make a GET request to `/api/v1/products`.
-2. Check the backend terminal. The first request will log `Cache MISS: products_all` and fetch from MongoDB.
-3. Make the same request again. The terminal will log `Cache HIT: products_all` and return instantly from Redis without hitting the database.
+
+1. Start Redis and backend.
+2. `GET http://localhost:5000/api/v1/products`
+3. Terminal shows `Cache MISS: products_all`
+4. Repeat request → `Cache HIT: products_all`
 
 ## Socket.IO Demo
-1. Connect two clients (e.g., Postman WebSocket or frontend clients).
-2. Authenticate Client A as an `admin`. It will automatically join the `admin_room`.
-3. Have Client B place an order via `POST /api/v1/orders`.
-4. Client A will instantly receive a `new-order` WebSocket event containing the order details.
 
-## Viva Demo Flow
-1. **Architecture Proof:** Show the clean folder separation between `frontend/` and `backend/`.
-2. **Authentication Flow:** Postman demo: hit `/register`, then `/login` (show JWT generation). Hit `/refresh-token` to prove token rotation.
-3. **Security:** Show `app.js` configuring Helmet, CORS, and Rate Limiting. Attempt to access a protected route without a token to trigger the Global Error Handler (401 Unauthorized).
-4. **Performance:** Hit `/api/v1/products` twice and show the Redis Cache HIT in the terminal logs.
-5. **Real-time:** Place an order and show the Socket.IO `new-order` event firing in real-time.
+| Event | Room | Trigger |
+|---|---|---|
+| `new-order` | `admin_room` | Customer places order |
+| `order-status-updated` | `user:{userId}` | Admin updates status |
+| `low-stock-alert` | `admin_room` | Stock ≤ 5 after order |
+
+Frontend listeners: `frontend/app/admin/page.jsx`, `frontend/app/(site)/orders/page.jsx`
+
+## Auth Flow
+
+1. `POST /auth/login` → Passport validates password
+2. Response: `{ data: { user, accessToken } }` + `jwt` HTTP-only cookie
+3. Frontend stores access token in cookie; sends `Authorization: Bearer`
+4. On 401 → `POST /auth/refresh-token` → new access token + rotated refresh cookie
+
+## Security Practices
+
+- Passwords hashed with bcrypt (pre-save hook)
+- Refresh tokens stored hashed in MongoDB with `jti`
+- Order totals computed from DB product prices
+- Admin routes protected by `protect` + `authorizeRoles('admin')`
+- Input validation on all mutation endpoints

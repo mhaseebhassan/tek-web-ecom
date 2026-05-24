@@ -3,53 +3,16 @@ const Product = require('../models/product.model');
 const User = require('../models/user.model');
 const StoreSettings = require('../models/storeSettings.model');
 const asyncHandler = require('../middlewares/async.middleware');
-const ApiError = require('../utils/ApiError');
-
-const ORDER_STATUSES = ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled'];
-const PAYMENT_STATUSES = ['pending', 'completed', 'failed', 'refunded'];
-
-const serializeOrder = (order) => {
-  const plain = order.toObject ? order.toObject() : order;
-
-  return {
-    id: plain._id.toString(),
-    user: plain.user
-      ? {
-          id: plain.user._id?.toString?.() || plain.user.toString(),
-          name: plain.user.name,
-          email: plain.user.email,
-        }
-      : null,
-    items: (plain.items || []).map((item) => ({
-      product: item.product
-        ? {
-            id: item.product._id?.toString?.() || item.product.toString(),
-            name: item.product.name || item.name,
-            category: item.product.category,
-          }
-        : null,
-      name: item.name,
-      image: item.image,
-      price: item.price,
-      quantity: item.quantity,
-    })),
-    subtotal: plain.subtotal,
-    shippingFee: plain.shippingFee,
-    tax: plain.tax,
-    total: plain.total,
-    totalAmount: plain.total,
-    status: plain.orderStatus,
-    paymentStatus: plain.paymentStatus,
-    shippingAddress: plain.shippingAddress,
-    createdAt: plain.createdAt,
-    updatedAt: plain.updatedAt,
-  };
-};
+const { clearCache } = require('../middlewares/cache.middleware');
+const orderService = require('../services/order.service');
 
 exports.getDashboardStats = asyncHandler(async (req, res, next) => {
   const orders = await Order.find();
   const products = await Product.find();
   const users = await User.find({ role: 'customer' });
+  const lowStockProducts = await Product.find({ stock: { $lte: 5 }, isActive: true })
+    .select('name stock slug')
+    .limit(10);
 
   const totalRevenue = orders.reduce((acc, order) => acc + order.total, 0);
 
@@ -60,54 +23,33 @@ exports.getDashboardStats = asyncHandler(async (req, res, next) => {
       orders: orders.length,
       customers: users.length,
       products: products.length,
+      lowStock: lowStockProducts.length,
+      lowStockProducts: lowStockProducts.map((p) => ({
+        id: p._id.toString(),
+        name: p.name,
+        stock: p.stock,
+        slug: p.slug,
+      })),
     },
   });
 });
 
 exports.getOrders = asyncHandler(async (req, res, next) => {
-  const orders = await Order.find()
-    .populate('user', 'name email')
-    .populate('items.product', 'name category')
-    .sort({ createdAt: -1 });
+  const orders = await orderService.listOrders();
 
   res.status(200).json({
     success: true,
-    orders: orders.map(serializeOrder),
+    orders,
   });
 });
 
 exports.updateOrder = asyncHandler(async (req, res, next) => {
   const { status, paymentStatus } = req.body;
-  const updates = {};
-
-  if (status !== undefined) {
-    if (!ORDER_STATUSES.includes(status)) {
-      return next(new ApiError(400, 'Invalid order status'));
-    }
-    updates.orderStatus = status;
-  }
-
-  if (paymentStatus !== undefined) {
-    if (!PAYMENT_STATUSES.includes(paymentStatus)) {
-      return next(new ApiError(400, 'Invalid payment status'));
-    }
-    updates.paymentStatus = paymentStatus;
-  }
-
-  const order = await Order.findByIdAndUpdate(req.params.id, updates, {
-    new: true,
-    runValidators: true,
-  })
-    .populate('user', 'name email')
-    .populate('items.product', 'name category');
-
-  if (!order) {
-    return next(new ApiError(404, 'Order not found'));
-  }
+  const order = await orderService.updateOrderStatus({ orderId: req.params.id, status, paymentStatus });
 
   res.status(200).json({
     success: true,
-    order: serializeOrder(order),
+    order,
   });
 });
 
@@ -149,7 +91,7 @@ exports.getAnalytics = asyncHandler(async (req, res, next) => {
 
   res.status(200).json({
     success: true,
-    orders: orders.map(serializeOrder),
+    orders: orders.map(orderService.serializeOrder),
   });
 });
 

@@ -4,8 +4,8 @@ pipeline {
     environment {
         DOCKER_HUB_REPO = "haseebbhinder/tekron"
         COMMITTER_EMAIL = sh(script: "git log -1 --pretty=format:'%ae'", returnStdout: true).trim()
-        DATABASE_URL = "postgresql://tekron_user:tekron_password@db:5432/tekron_db"
-        NEXTAUTH_SECRET = credentials('NEXTAUTH_SECRET')
+        JWT_ACCESS_SECRET = credentials('JWT_ACCESS_SECRET')
+        JWT_REFRESH_SECRET = credentials('JWT_REFRESH_SECRET')
     }
 
     stages {
@@ -17,7 +17,7 @@ pipeline {
 
         stage('Build Application') {
             steps {
-                sh 'docker compose build web'
+                sh 'docker compose build backend frontend'
             }
         }
 
@@ -27,14 +27,10 @@ pipeline {
             }
             steps {
                 script {
-                    // 1. Start Database and Web in background
-                    sh 'docker compose up -d db web'
-                    
-                    // 2. Wait for Web to be healthy and Push DB Schema
-                    sh 'docker compose exec -T web npx prisma db push --accept-data-loss'
-                    
-                    // 3. Run Tests
-                    sh 'docker compose up --build --force-recreate --exit-code-from tests tests'
+                    sh 'docker compose up -d mongo redis backend frontend'
+                    sh 'docker compose exec -T backend npm run seed:admin'
+                    sh 'docker compose exec -T backend npm run seed:products'
+                    sh 'docker compose ps'
                 }
             }
             post {
@@ -57,10 +53,10 @@ pipeline {
                 branch 'main'
             }
             steps {
-                sh "docker tag tekron-ci-cd_web ${DOCKER_HUB_REPO}:latest"
+                sh "docker tag tekron-frontend ${DOCKER_HUB_REPO}:latest"
                 // sh "docker push ${DOCKER_HUB_REPO}:latest" // Uncomment if Docker Hub creds are set
                 sh 'docker rm -f tekron-prod || true'
-                sh "docker run -d -p 3001:3000 --name tekron-prod -e DATABASE_URL=${env.DATABASE_URL} -e NEXTAUTH_SECRET=${env.NEXTAUTH_SECRET} -e NEXTAUTH_URL=http://localhost:3001 ${DOCKER_HUB_REPO}:latest"
+                sh "docker run -d -p 3001:3000 --name tekron-prod -e NEXT_PUBLIC_API_BASE_URL=http://localhost:5000/api/v1 ${DOCKER_HUB_REPO}:latest"
             }
         }
     }

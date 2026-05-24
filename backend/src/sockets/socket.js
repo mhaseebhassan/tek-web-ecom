@@ -1,5 +1,6 @@
 const socketIo = require('socket.io');
 const jwt = require('jsonwebtoken');
+const { getJwtAccessSecret } = require('../config/env');
 
 let io;
 
@@ -20,7 +21,7 @@ const initSocket = (server) => {
     }
 
     try {
-      const decoded = jwt.verify(token, process.env.JWT_ACCESS_SECRET || 'access_secret');
+      const decoded = jwt.verify(token, getJwtAccessSecret());
       socket.user = decoded;
       next();
     } catch (err) {

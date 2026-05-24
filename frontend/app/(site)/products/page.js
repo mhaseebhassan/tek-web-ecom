@@ -1,121 +1,179 @@
 'use client';
 
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
-import { useCart } from '@/context/CartContext';
-import { ShoppingCartIcon } from '@heroicons/react/24/outline';
-import { useEffect, useState } from 'react';
-import SectionDivider from '@/components/SectionDivider';
-
-
-function ProductCard({ product }) {
-  const { addToCart } = useCart();
-  const [added, setAdded] = useState(false);
-
-  const handleAddToCart = (e) => {
-    e.preventDefault(); // Prevent navigating to the product page when clicking the button
-    addToCart(product);
-    setAdded(true);
-    setTimeout(() => setAdded(false), 2000);
-  };
-
-  return (
-    <Link
-      href={`/products/${product.slug}`}
-      className="group glass-card rounded-[2rem] overflow-hidden shadow-xl shadow-teal-500/10 hover:shadow-2xl hover:shadow-teal-500/20 hover:-translate-y-1 transition-all duration-300 flex flex-col h-full relative"
-    >
-      {/* Image Container */}
-      <div className="relative flex items-center justify-center bg-gradient-to-br from-white to-amber-50/60 h-56 p-6 overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-teal-500/10 to-amber-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-        <Image
-          src={product.image || (product.images && product.images[0]) || 'https://via.placeholder.com/600x600'}
-          alt={product.name}
-          width={200}
-          height={200}
-          className="object-contain max-h-48 w-auto h-auto drop-shadow-xl group-hover:scale-110 transition-transform duration-500"
-        />
-      </div>
-
-      {/* Product Info */}
-      <div className="p-6 flex flex-col flex-grow bg-white/50 backdrop-blur-sm relative">
-        <div className="flex items-center justify-between mb-2">
-          <h3 className="text-lg font-black text-gray-900 group-hover:text-teal-700 transition-colors">{product.name}</h3>
-          <span className="label label-teal">{product.category}</span>
-        </div>
-        <p className="text-gray-500 text-sm mb-6 line-clamp-2 leading-relaxed flex-grow">{product.description}</p>
-
-        <div className="flex justify-between items-center mt-auto pt-4 border-t border-amber-100/60">
-          <span className="text-xl font-black text-slate-900">
-            ${product.price.toLocaleString()}
-          </span>
-          <div className="flex gap-2">
-            <button
-              onClick={handleAddToCart}
-              title="Add to Cart"
-              disabled={added}
-              className={`p-2.5 rounded-xl transition-colors shadow-md flex items-center justify-center ${added ? 'bg-emerald-500 text-white' : 'bg-white/80 text-gray-700 hover:bg-teal-600 hover:text-white'
-                }`}
-            >
-              <ShoppingCartIcon className="w-5 h-5" />
-            </button>
-            <span className="px-4 py-2 bg-gray-900 text-white text-sm font-semibold rounded-xl group-hover:bg-teal-600 transition-colors shadow-md flex items-center">
-              View
-            </span>
-          </div>
-        </div>
-      </div>
-    </Link>
-  );
-}
+import { CubeIcon } from '@heroicons/react/24/outline';
+import PageShell from '@/components/PageShell';
+import ProductCard from '@/components/ProductCard';
+import SafeImage from '@/components/SafeImage';
+import CatalogToolbar from '@/components/CatalogToolbar';
+import ProductGridSkeleton from '@/components/ui/ProductGridSkeleton';
+import EmptyState from '@/components/ui/EmptyState';
+import ScrollReveal from '@/components/ui/ScrollReveal';
+import { getProductImage, loadCatalogProducts } from '@/lib/products';
 
 export default function ProductsPage() {
   const [products, setProducts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [search, setSearch] = useState('');
+  const [category, setCategory] = useState('');
+  const [sort, setSort] = useState('newest');
 
   useEffect(() => {
-    const loadProducts = async () => {
-      try {
-        const { default: api } = await import('@/lib/api');
-        const response = await api.get('/products');
-        setProducts(response.data.products || []);
-      } catch (error) {
-        console.error(error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    loadProducts();
+    const initialCategory = new URLSearchParams(window.location.search).get('category');
+    if (initialCategory) setCategory(initialCategory);
   }, []);
 
+  useEffect(() => {
+    loadCatalogProducts().then((data) => {
+      setProducts(data);
+      setIsLoading(false);
+    });
+  }, []);
+
+  const categories = useMemo(
+    () => [...new Set(products.map((p) => p.category).filter(Boolean))].sort(),
+    [products]
+  );
+
+  const categoryTiles = useMemo(
+    () =>
+      categories.map((cat) => {
+        const items = products.filter((product) => product.category === cat);
+        const featured = items.find((product) => product.isFeatured) || items[0];
+        return {
+          name: cat,
+          count: items.length,
+          product: featured,
+        };
+      }),
+    [categories, products]
+  );
+
+  const filtered = useMemo(() => {
+    let list = [...products];
+
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      list = list.filter(
+        (p) =>
+          p.name?.toLowerCase().includes(q) ||
+          p.description?.toLowerCase().includes(q) ||
+          p.category?.toLowerCase().includes(q)
+      );
+    }
+
+    if (category) {
+      list = list.filter((p) => p.category === category);
+    }
+
+    switch (sort) {
+      case 'price_asc':
+        list.sort((a, b) => a.price - b.price);
+        break;
+      case 'price_desc':
+        list.sort((a, b) => b.price - a.price);
+        break;
+      case 'name':
+        list.sort((a, b) => a.name.localeCompare(b.name));
+        break;
+      default:
+        break;
+    }
+
+    return list;
+  }, [products, search, category, sort]);
+
   return (
-    <div className="min-h-screen bg-gray-50/50 py-16 relative overflow-hidden theme-ocean">
-      {/* Decorative Blur Background Element */}
-      <div className="absolute top-0 right-1/4 w-[800px] h-[600px] bg-gradient-to-bl from-teal-100/60 to-amber-100/60 rounded-[100%] blur-3xl opacity-50 pointer-events-none -z-10 -translate-y-1/4"></div>
+    <PageShell
+      title="Catalog"
+      subtitle="Search the full product list, filter by category, and compare the details that matter before you add anything to cart."
+    >
+      {!isLoading && categoryTiles.length > 0 && (
+        <section className="mb-10">
+          <div className="mb-4 flex items-end justify-between gap-4">
+            <div>
+              <h2 className="text-2xl font-black tracking-tight text-foreground">Shop by category</h2>
+              <p className="mt-2 text-sm font-medium text-muted-foreground">Start with the product family you have in mind.</p>
+            </div>
+            {category && (
+              <button type="button" onClick={() => setCategory('')} className="btn-ghost hidden sm:inline-flex">
+                Clear category
+              </button>
+            )}
+          </div>
+          <div className="grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-6">
+            {categoryTiles.map((tile) => (
+              <button
+                key={tile.name}
+                type="button"
+                onClick={() => setCategory(tile.name)}
+                className={`surface-card group relative min-h-[190px] overflow-hidden p-4 text-left transition-smooth hover:-translate-y-1 hover:border-primary/30 hover:shadow-[var(--shadow-soft)] ${
+                  category === tile.name ? 'border-primary/45 bg-white/[0.08]' : ''
+                }`}
+              >
+                <div className="aurora-sheen opacity-35" />
+                {tile.product && (
+                  <SafeImage
+                    src={getProductImage(tile.product)}
+                    alt={tile.product.name}
+                    fill
+                    className="object-contain object-right-bottom p-4 pl-20 pt-16 opacity-75 drop-shadow-[0_18px_26px_rgb(0_0_0/0.38)] transition-transform duration-500 group-hover:scale-105"
+                    sizes="(max-width: 768px) 50vw, 16vw"
+                  />
+                )}
+                <div className="relative z-10">
+                  <span className={`label ${category === tile.name ? 'label-emerald' : 'label-primary'}`}>
+                    {tile.count} item{tile.count === 1 ? '' : 's'}
+                  </span>
+                  <h3 className="mt-3 text-lg font-black tracking-tight text-foreground">{tile.name}</h3>
+                </div>
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-        <div className="text-center mb-16 reveal">
-          <h1 className="text-4xl md:text-5xl font-black text-gray-900 tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-gray-900 to-gray-600 mb-4">
-            Our Catalog
-          </h1>
-          <p className="text-lg text-gray-500 max-w-2xl mx-auto">
-            Discover the latest technology curated for peak performance and elegant design.
-          </p>
-        </div>
+      <CatalogToolbar
+        search={search}
+        onSearchChange={setSearch}
+        category={category}
+        onCategoryChange={setCategory}
+        categories={categories}
+        sort={sort}
+        onSortChange={setSort}
+        resultCount={filtered.length}
+      />
 
-        <SectionDivider variant="ocean" />
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-          {isLoading ? (
-            <div className="col-span-full text-center text-gray-500">Loading products...</div>
-          ) : (
-            products.map((product) => (
-              <div key={product._id || product.id} className="reveal reveal-delay-2">
-                <ProductCard product={product} />
-              </div>
-            ))
-          )}
+      {isLoading ? (
+        <ProductGridSkeleton />
+      ) : filtered.length === 0 ? (
+        <EmptyState
+          icon={CubeIcon}
+          title="No products found"
+          description="Try a different search, remove filters, or return to the full catalog."
+          actionLabel="Clear filters"
+          onAction={() => {
+            setSearch('');
+            setCategory('');
+          }}
+        />
+      ) : (
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {filtered.map((product, idx) => (
+            <ProductCard key={product.id || product._id || product.slug} product={product} index={idx} />
+          ))}
         </div>
-      </div>
-    </div>
-  )
+      )}
+
+      <ScrollReveal delay={300}>
+        <p className="mt-12 text-center text-sm font-medium text-muted-foreground">
+          Not sure which device fits?{' '}
+          <Link href="/contact" className="font-bold text-accent hover:underline">
+            Ask us
+          </Link>
+        </p>
+      </ScrollReveal>
+    </PageShell>
+  );
 }
