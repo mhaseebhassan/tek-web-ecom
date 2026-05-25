@@ -223,15 +223,18 @@ export default function Home() {
       <section className="page-shell pt-0">
         <div className="surface-panel grid gap-8 p-8 md:grid-cols-[1fr_auto] md:items-center md:p-10">
           <div>
-            <h2 className="section-title">Get early access to the next drop.</h2>
-            <p className="section-copy mt-3">Get a simple note when new products, price changes, or useful buying guides go live.</p>
+            <h2 className="section-title">Find the right tech without the guesswork.</h2>
+            <p className="section-copy mt-3">Browse clear specs, current prices, and featured picks built for quick comparison.</p>
           </div>
-          <form className="flex w-full flex-col gap-3 sm:w-auto sm:min-w-[420px] sm:flex-row" onSubmit={(e) => e.preventDefault()}>
-            <input type="email" required placeholder="you@email.com" className="input-field" />
-            <button type="submit" className="btn-secondary whitespace-nowrap">
-              Subscribe
-            </button>
-          </form>
+          <div className="flex w-full flex-col gap-3 sm:w-auto sm:min-w-[360px] sm:flex-row">
+            <Link href="/products" className="btn-secondary whitespace-nowrap">
+              Explore products
+              <ArrowRightIcon className="h-4 w-4" />
+            </Link>
+            <Link href="/about" className="btn-outline whitespace-nowrap">
+              About Tekron
+            </Link>
+          </div>
         </div>
       </section>
     </main>
