@@ -48,9 +48,6 @@ export default function Home() {
   const displayProducts = featured.length >= 4 ? featured : products.slice(0, 4);
   const showcaseProducts = products.length > 0 ? products : displayProducts;
   const heroProduct = showcaseProducts.length > 0 ? showcaseProducts[heroIndex % showcaseProducts.length] : null;
-  const sideProducts = showcaseProducts.length > 1
-    ? [1, 2].map((offset) => showcaseProducts[(heroIndex + offset) % showcaseProducts.length]).filter(Boolean)
-    : [];
 
   useEffect(() => {
     if (showcaseProducts.length <= 1) return undefined;
@@ -137,7 +134,93 @@ export default function Home() {
   return (
     <main className="min-h-screen">
       <section className="page-shell pb-14 pt-12 md:pb-20 md:pt-16">
-        <div className="grid items-center gap-10 lg:grid-cols-[0.95fr_1.05fr] lg:gap-14">
+        <div className="min-w-0 max-w-full overflow-hidden lg:hidden">
+          <div className="surface-panel relative mx-auto w-full max-w-[calc(100vw-2rem)] overflow-hidden px-5 pb-6 pt-7 animate-fade-up">
+            <div className="aurora-sheen" />
+            <div className="absolute inset-x-0 top-0 h-28 bg-[linear-gradient(180deg,rgba(250,197,100,0.16),transparent)]" />
+            <div className="absolute -right-16 top-10 h-44 w-44 rounded-full border border-white/10 bg-white/[0.035]" />
+            <div className="relative">
+              <h1 className="text-[3.7rem] font-black leading-[0.88] tracking-tight text-foreground">
+                Tekron
+              </h1>
+              <p className="mt-4 max-w-[18rem] text-sm font-semibold leading-6 text-muted-foreground">
+                Premium Apple tech, clear picks, and prices made easy to compare.
+              </p>
+
+              <div className="relative mt-7 min-h-[360px] max-w-full overflow-hidden rounded-[1.45rem] border border-white/10 bg-[radial-gradient(circle_at_50%_14%,rgba(255,255,255,0.16),rgba(255,255,255,0.045)_48%,rgba(0,0,0,0.16))]">
+                {heroProduct ? (
+                  <>
+                    <div className="absolute inset-x-8 top-7 h-40 rounded-full bg-primary/20 blur-3xl" />
+                    <Link
+                      href={`/products/${heroProduct.slug}`}
+                      className="group absolute inset-0 flex flex-col items-center justify-between px-5 pb-5 pt-7"
+                    >
+                      <div className="relative flex min-h-[205px] w-full items-center justify-center">
+                        <SafeImage
+                          src={getProductImage(heroProduct)}
+                          alt={heroProduct.name}
+                          width={360}
+                          height={360}
+                          className="float-soft max-h-[205px] w-full object-contain drop-shadow-[0_28px_38px_rgb(0_0_0/0.48)] transition-transform duration-700 group-hover:scale-105"
+                          priority
+                        />
+                      </div>
+                      <div className="self-stretch rounded-[1.1rem] border border-white/10 bg-background/[0.72] p-4 shadow-[var(--shadow-tight)] backdrop-blur-2xl">
+                        <p className="text-[10px] font-black uppercase tracking-[0.18em] text-primary">Featured pick</p>
+                        <h2 className="mt-1 line-clamp-2 text-xl font-black leading-tight tracking-tight text-foreground">
+                          {heroProduct.name}
+                        </h2>
+                        <p className="mt-1 text-sm font-black text-muted-foreground">
+                          ${Number(heroProduct.price).toLocaleString()}
+                        </p>
+                      </div>
+                    </Link>
+                  </>
+                ) : (
+                  <div className="flex h-[360px] items-center justify-center text-sm font-semibold text-muted-foreground">
+                    Loading the catalog
+                  </div>
+                )}
+              </div>
+
+              <div className="mt-4 flex items-center justify-center gap-2" aria-hidden>
+                {showcaseProducts.slice(0, Math.min(5, showcaseProducts.length || 3)).map((product, index) => (
+                  <span
+                    key={product?.id || product?.slug || index}
+                    className={`h-1.5 rounded-full transition-all duration-500 ${
+                      heroProduct && product?.slug === heroProduct.slug ? 'w-7 bg-primary' : 'w-1.5 bg-white/25'
+                    }`}
+                  />
+                ))}
+              </div>
+
+              <div className="mt-6 grid min-w-0 grid-cols-3 gap-2 overflow-hidden">
+                {[
+                  { label: 'Catalog', value: products.length || '8+' },
+                  { label: 'Prices', value: 'Clear' },
+                  { label: 'Orders', value: 'Ready' },
+                ].map((stat) => (
+                  <div key={stat.label} className="min-w-0 rounded-[1rem] border border-white/10 bg-white/[0.055] px-2 py-3 text-center">
+                    <p className="truncate text-base font-black tracking-tight text-foreground">{stat.value}</p>
+                    <p className="mt-1 text-[9px] font-black uppercase tracking-[0.16em] text-muted-foreground">{stat.label}</p>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-5 grid grid-cols-1 gap-3">
+                <Link href="/products" className="btn-primary w-full">
+                  Shop catalog
+                  <ArrowRightIcon className="h-4 w-4" />
+                </Link>
+                <Link href="/about" className="btn-outline w-full">
+                  Why Tekron
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="hidden items-center gap-10 lg:grid lg:grid-cols-[0.95fr_1.05fr] lg:gap-14">
           <div className="animate-fade-up">
             <h1 className="text-6xl font-black tracking-tight text-foreground sm:text-7xl lg:text-8xl">
               Tekron
