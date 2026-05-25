@@ -15,7 +15,7 @@ Tekron is a premium tech e-commerce platform built for the **Advanced Web Techno
 
 ## Project Structure
 
-```
+```text
 tekron/
 ├── frontend/          # Next.js storefront + admin UI
 ├── backend/           # Express REST API + Socket.IO
@@ -30,7 +30,7 @@ tekron/
 
 - Node.js 18+
 - MongoDB (`mongod` on `mongodb://127.0.0.1:27017`)
-- Redis (`redis://localhost:6379`) — optional; app runs without it
+- Redis (`redis://localhost:6379`) - optional; app runs without it
 
 ## Quick Start
 
@@ -59,6 +59,14 @@ cp .env.local.example .env.local
 
 Set strong values for `JWT_ACCESS_SECRET` and `JWT_REFRESH_SECRET` in `backend/.env`.
 
+To create an admin account, set your own values in `backend/.env` before seeding:
+
+```bash
+SEED_ADMIN_NAME=Your Admin Name
+SEED_ADMIN_EMAIL=your-admin-email@example.com
+SEED_ADMIN_PASSWORD=replace_with_a_strong_password
+```
+
 ### 3. Seed database
 
 ```bash
@@ -70,14 +78,14 @@ npm run seed:products
 
 ### 4. Run servers
 
-**Terminal 1 — Backend:**
+**Terminal 1 - Backend:**
 
 ```bash
 cd backend
 npm run dev
 ```
 
-**Terminal 2 — Frontend:**
+**Terminal 2 - Frontend:**
 
 ```bash
 cd frontend
@@ -90,15 +98,12 @@ npm run dev
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000)
+Open [http://localhost:3000](http://localhost:3000).
 
-## Test Credentials
+## Demo Accounts
 
-| Role | Email | Password |
-|---|---|---|
-| Admin | `admin@tekron.com` | `Admin@12345` |
-
-Register a customer account from `/auth/register` for checkout demos.
+Run the seed scripts after setting your own admin values in `backend/.env`.
+Register customer accounts from `/auth/register` for checkout demos.
 
 ## API Overview
 
@@ -125,15 +130,15 @@ Base URL: `http://localhost:5000/api/v1`
 - JWT access token (15m) + rotated refresh token in HTTP-only cookie
 - Role-based authorization (`customer`, `admin`)
 - Backend order total recalculation from MongoDB product prices
-- Passwords and refresh tokens never returned in API JSON
+- Passwords and refresh tokens are never returned in API JSON
 
 ## Viva Demo Flow
 
 1. Show monorepo structure (`frontend/` + `backend/`).
-2. Login via Postman or UI → show JWT + refresh cookie.
-3. Hit `GET /api/v1/products` twice → show Redis `Cache HIT` in backend logs.
-4. Place order as customer → admin dashboard receives Socket.IO `new-order` toast.
-5. Admin updates order status → customer `/orders` receives `order-status-updated`.
+2. Login via Postman or UI -> show JWT + refresh cookie.
+3. Hit `GET /api/v1/products` twice -> show Redis `Cache HIT` in backend logs.
+4. Place order as customer -> admin dashboard receives Socket.IO `new-order` toast.
+5. Admin updates order status -> customer `/orders` receives `order-status-updated`.
 6. Show `backend/src/app.js` middleware stack and global error handler.
 
 ## Docker Compose
@@ -149,9 +154,9 @@ docker compose exec backend npm run seed
 | Issue | Fix |
 |---|---|
 | `ECONNREFUSED` MongoDB | Start `mongod` or check `MONGO_URI` |
-| Redis errors in console | Start Redis or ignore — caching is disabled automatically |
+| Redis errors in console | Start Redis or ignore - caching is disabled automatically |
 | 401 on checkout | Log in first; checkout requires authentication |
-| Admin access denied | Use `admin@tekron.com` / `Admin@12345` |
+| Admin access denied | Confirm your seeded admin email/password and role in MongoDB |
 | Images not loading | Use `/filename.png` in `frontend/public` or a full HTTPS URL |
 
 ---
