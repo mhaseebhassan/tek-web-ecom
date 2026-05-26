@@ -59,6 +59,8 @@ spec:
               value: "lax"
             - name: REDIS_ENABLED
               value: "false"
+            - name: AUTH_RATE_LIMIT_MAX
+              value: "1000"
           resources:
             requests:
               cpu: "100m"
