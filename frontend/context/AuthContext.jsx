@@ -14,7 +14,7 @@ export const AuthProvider = ({ children }) => {
 
   const persistToken = (accessToken) => {
     Cookies.set('accessToken', accessToken, {
-      secure: process.env.NODE_ENV === 'production',
+      secure: false, // Minikube uses HTTP, so secure must be false
       sameSite: 'lax',
     });
   };

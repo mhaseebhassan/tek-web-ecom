@@ -49,7 +49,7 @@ async function fetchWithAuth(endpoint, options = {}, retry = false) {
 
       if (newAccessToken) {
         Cookies.set('accessToken', newAccessToken, {
-          secure: process.env.NODE_ENV === 'production',
+          secure: false, // Minikube uses HTTP, so secure must be false
           sameSite: 'lax',
         });
         return fetchWithAuth(endpoint, options, true);
