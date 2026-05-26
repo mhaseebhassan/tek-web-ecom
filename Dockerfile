@@ -7,7 +7,7 @@ RUN npm ci
 
 COPY frontend/ ./
 
-ARG NEXT_PUBLIC_API_BASE_URL=http://localhost:5000/api/v1
+ARG NEXT_PUBLIC_API_BASE_URL=/api/v1
 ENV NEXT_PUBLIC_API_BASE_URL=$NEXT_PUBLIC_API_BASE_URL
 
 RUN npm run build
