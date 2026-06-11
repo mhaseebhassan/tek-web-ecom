@@ -25,26 +25,26 @@ export default function AboutPage() {
           </div>
         </ScrollReveal>
 
-        <ScrollReveal delay={120}>
+        <ScrollReveal delay={120} className="h-full">
           <div className="surface-card h-full p-8">
             <ShieldCheckIcon className="h-9 w-9 text-primary" />
-            <h3 className="mt-8 text-2xl font-black tracking-tight text-foreground">More than a static storefront.</h3>
-            <p className="mt-4 text-sm font-medium leading-7 text-muted-foreground">
-              The site runs on a Next.js storefront, an Express REST API, MongoDB, Passport with JWT, Redis caching, and Socket.IO. That gives the store real accounts, product management, carts, orders, and admin tools without making the customer side feel heavy.
+            <h3 className="mt-6 text-3xl font-black tracking-tight text-foreground md:text-4xl">Quality and trust guaranteed.</h3>
+            <p className="mt-6 text-base font-medium leading-7 text-muted-foreground">
+              We believe in providing our customers with a seamless, fast, and secure shopping experience. With a dedicated support team and real-time order tracking, you can shop with confidence knowing we've got you covered from cart to delivery.
             </p>
           </div>
         </ScrollReveal>
       </div>
 
       <div className="mt-6 grid grid-cols-1 gap-5 md:grid-cols-3">
-        <ScrollReveal delay={0}>
+        <ScrollReveal delay={0} className="h-full [&>div]:h-full">
           <FeatureCard icon={SparklesIcon} title="Focused catalog" description="Apple products grouped by real buying categories, with pricing and specs easy to scan." />
         </ScrollReveal>
-        <ScrollReveal delay={100}>
+        <ScrollReveal delay={100} className="h-full [&>div]:h-full">
           <FeatureCard icon={UserGroupIcon} title="Useful accounts" description="Customers can save carts, place orders, and return later to check what happened." />
         </ScrollReveal>
-        <ScrollReveal delay={200}>
-          <FeatureCard icon={GlobeAltIcon} title="Room to grow" description="The backend is separated into routes, controllers, services, repositories, cache, and admin tools." />
+        <ScrollReveal delay={200} className="h-full [&>div]:h-full">
+          <FeatureCard icon={GlobeAltIcon} title="Always evolving" description="We are constantly expanding our product line and improving our services to better meet your technology needs." />
         </ScrollReveal>
       </div>
     </PageShell>

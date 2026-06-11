@@ -7,19 +7,24 @@ const serializeCart = (cart) => {
   const plain = cart.toObject ? cart.toObject() : cart;
   return {
     id: plain._id.toString(),
-    items: (plain.items || []).map((item) => ({
-      product: item.product
-        ? {
-            id: item.product._id.toString(),
-            name: item.product.name,
-            price: item.product.price,
-            stock: item.product.stock,
-            images: item.product.images,
-            slug: item.product.slug,
-          }
-        : null,
-      quantity: item.quantity,
-    })),
+    items: (plain.items || []).map((item) => {
+      const product = item.product;
+      const isPopulated = product && typeof product === 'object' && product.name;
+
+      return {
+        product: isPopulated
+          ? {
+              id: product._id.toString(),
+              name: product.name,
+              price: product.price,
+              stock: product.stock,
+              images: product.images,
+              slug: product.slug,
+            }
+          : null,
+        quantity: item.quantity,
+      };
+    }),
   };
 };
 

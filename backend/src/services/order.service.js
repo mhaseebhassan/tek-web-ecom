@@ -69,7 +69,7 @@ exports.createOrder = async ({ user, body }) => {
   const cart = user ? await Cart.findOne({ user: user.id }).populate('items.product') : null;
   const checkoutItems =
     cart && cart.items.length > 0
-      ? cart.items.map((item) => ({ product: item.product._id, quantity: item.quantity }))
+      ? cart.items.map((item) => ({ product: item.product?._id, quantity: item.quantity }))
       : items.map((item) => ({ product: item.product || item.productId, quantity: item.quantity }));
 
   if (checkoutItems.length === 0) {
@@ -79,58 +79,73 @@ exports.createOrder = async ({ user, body }) => {
   let subtotal = 0;
   const orderItems = [];
   const lowStockProducts = [];
+  const reservedItems = [];
+  let order;
 
-  for (const item of checkoutItems) {
-    const product = await Product.findById(item.product);
+  try {
+    for (const item of checkoutItems) {
+      if (!item.product) {
+        throw new ApiError(400, 'A product in your cart is no longer available');
+      }
 
-    if (!product || !product.isActive) {
-      throw new ApiError(400, 'A product in your cart is no longer available');
+      const product = await Product.findById(item.product);
+
+      if (!product || !product.isActive) {
+        throw new ApiError(400, 'A product in your cart is no longer available');
+      }
+
+      const updated = await Product.findOneAndUpdate(
+        { _id: product._id, isActive: true, stock: { $gte: item.quantity } },
+        { $inc: { stock: -item.quantity } },
+        { new: true }
+      );
+
+      if (!updated) {
+        throw new ApiError(400, `Not enough stock for ${product.name}`);
+      }
+
+      reservedItems.push({ product: product._id, quantity: item.quantity });
+      if (updated.stock <= 5) {
+        lowStockProducts.push(updated);
+      }
+
+      subtotal += product.price * item.quantity;
+      orderItems.push({
+        product: product._id,
+        name: product.name,
+        image: product.images && product.images.length > 0 ? product.images[0] : '',
+        price: product.price,
+        quantity: item.quantity,
+      });
     }
 
-    if (product.stock < item.quantity) {
-      throw new ApiError(400, `Not enough stock for ${product.name}`);
-    }
+    const shippingFee = subtotal > 1000 ? 0 : 50;
+    const tax = Math.round(subtotal * 0.1 * 100) / 100;
+    const total = subtotal + shippingFee + tax;
 
-    subtotal += product.price * item.quantity;
-    orderItems.push({
-      product: product._id,
-      name: product.name,
-      image: product.images && product.images.length > 0 ? product.images[0] : '',
-      price: product.price,
-      quantity: item.quantity,
+    order = await orderRepository.createOrder({
+      user: user?.id,
+      guestCustomer: user
+        ? undefined
+        : {
+            name: customerName,
+            email: customerEmail,
+          },
+      items: orderItems,
+      shippingAddress,
+      paymentMethod,
+      subtotal,
+      shippingFee,
+      tax,
+      total,
     });
-  }
-
-  const shippingFee = subtotal > 1000 ? 0 : 50;
-  const tax = Math.round(subtotal * 0.1 * 100) / 100;
-  const total = subtotal + shippingFee + tax;
-
-  const order = await orderRepository.createOrder({
-    user: user?.id,
-    guestCustomer: user
-      ? undefined
-      : {
-          name: customerName,
-          email: customerEmail,
-        },
-    items: orderItems,
-    shippingAddress,
-    paymentMethod,
-    subtotal,
-    shippingFee,
-    tax,
-    total,
-  });
-
-  for (const item of orderItems) {
-    const updated = await Product.findByIdAndUpdate(
-      item.product,
-      { $inc: { stock: -item.quantity } },
-      { new: true }
+  } catch (error) {
+    await Promise.all(
+      reservedItems.map((item) =>
+        Product.findByIdAndUpdate(item.product, { $inc: { stock: item.quantity } })
+      )
     );
-    if (updated && updated.stock <= 5) {
-      lowStockProducts.push(updated);
-    }
+    throw error;
   }
 
   if (user) {
@@ -182,9 +197,14 @@ exports.getOrderForUser = async ({ orderId, user }) => {
 
 exports.updateOrderStatus = async ({ orderId, status, paymentStatus }) => {
   const updates = {};
+  let previousOrder = null;
 
   if (status !== undefined) {
     if (!ORDER_STATUSES.includes(status)) throw new ApiError(400, 'Invalid order status');
+    if (status === 'cancelled') {
+      previousOrder = await orderRepository.findOrderById(orderId);
+      if (!previousOrder) throw new ApiError(404, 'Order not found');
+    }
     updates.orderStatus = status;
   }
 
@@ -195,6 +215,16 @@ exports.updateOrderStatus = async ({ orderId, status, paymentStatus }) => {
 
   const order = await orderRepository.updateOrder(orderId, updates);
   if (!order) throw new ApiError(404, 'Order not found');
+
+  if (status === 'cancelled' && previousOrder.orderStatus !== 'cancelled') {
+    await Promise.all(
+      previousOrder.items
+        .map((item) => ({ productId: item.product?._id || item.product, quantity: item.quantity }))
+        .filter((item) => item.productId)
+        .map((item) => Product.findByIdAndUpdate(item.productId, { $inc: { stock: item.quantity } }))
+    );
+    await clearCache('products_*');
+  }
 
   await clearCache('admin_dashboard_stats');
 

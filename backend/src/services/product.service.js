@@ -8,6 +8,8 @@ const slugify = (value) =>
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '');
 
+const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
 const normalizeProductPayload = (body) => {
   const payload = { ...body };
 
@@ -52,8 +54,8 @@ const buildProductQuery = (query) => {
     filter.isFeatured = true;
   }
 
-  if (query.search) {
-    const searchRegex = new RegExp(query.search.trim(), 'i');
+  if (query.search && query.search.trim()) {
+    const searchRegex = new RegExp(escapeRegex(query.search.trim()), 'i');
     and.push({ $or: [{ name: searchRegex }, { description: searchRegex }, { category: searchRegex }, { brand: searchRegex }] });
   }
 

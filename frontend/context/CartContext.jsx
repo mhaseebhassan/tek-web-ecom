@@ -57,7 +57,15 @@ export function CartProvider({ children }) {
     if (!user || items.length === 0) return;
 
     for (const item of items) {
-      await api.post('/cart/items', { productId: item.id, quantity: item.quantity });
+      try {
+        await api.patch('/cart/items', { productId: item.id, quantity: item.quantity });
+      } catch (error) {
+        if (error.status === 404) {
+          await api.post('/cart/items', { productId: item.id, quantity: item.quantity });
+          continue;
+        }
+        throw error;
+      }
     }
   }, [user]);
 

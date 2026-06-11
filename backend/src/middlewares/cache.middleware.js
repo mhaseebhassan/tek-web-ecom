@@ -3,7 +3,7 @@ const { getRedisClient } = require('../config/redis');
 const cache = (keyBuilder, ttlSeconds = 3600) => {
   return async (req, res, next) => {
     const client = getRedisClient();
-    if (!client || !client.isOpen) {
+    if (!client || !client.isReady) {
       // Redis not available, skip cache
       return next();
     }
@@ -28,7 +28,7 @@ const cache = (keyBuilder, ttlSeconds = 3600) => {
             console.error('Redis setEx error:', err);
           });
         }
-        originalJson.call(this, body);
+        return originalJson.call(this, body);
       };
 
       next();
@@ -41,10 +41,11 @@ const cache = (keyBuilder, ttlSeconds = 3600) => {
 
 const clearCache = async (keyPattern) => {
   const client = getRedisClient();
-  if (!client || !client.isOpen) return;
+  if (!client || !client.isReady) return;
 
   try {
-    const keys = await client.keys(keyPattern);
+    const pattern = keyPattern.includes('*') ? keyPattern : `${keyPattern}*`;
+    const keys = await client.keys(pattern);
     if (keys.length > 0) {
       await client.del(keys);
     }

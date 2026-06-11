@@ -29,7 +29,10 @@ exports.getNotifications = asyncHandler(async (req, res) => {
 });
 
 exports.markAsRead = asyncHandler(async (req, res, next) => {
-  const notification = await Notification.findById(req.params.id);
+  const notification = await Notification.findOne({
+    _id: req.params.id,
+    $or: [{ recipient: req.user.id }, { roleTarget: req.user.role }, { roleTarget: 'all' }],
+  });
   if (!notification) return next(new ApiError(404, 'Notification not found'));
 
   notification.isRead = true;

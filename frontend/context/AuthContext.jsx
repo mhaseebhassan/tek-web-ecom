@@ -22,9 +22,20 @@ export const AuthProvider = ({ children }) => {
   const loadUser = useCallback(async () => {
     const token = Cookies.get('accessToken');
     if (!token) {
-      setUser(null);
-      setLoading(false);
-      return;
+      try {
+        const refreshRes = await api.post('/auth/refresh-token');
+        const refreshPayload = getPayload(refreshRes.data);
+        if (!refreshPayload.accessToken) {
+          setUser(null);
+          setLoading(false);
+          return;
+        }
+        persistToken(refreshPayload.accessToken);
+      } catch {
+        setUser(null);
+        setLoading(false);
+        return;
+      }
     }
 
     try {

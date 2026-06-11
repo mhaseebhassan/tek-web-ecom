@@ -35,7 +35,7 @@ async function fetchWithAuth(endpoint, options = {}, retry = false) {
   const url = `${baseURL}${endpoint}`;
   let response = await fetch(url, config);
 
-  if (response.status === 401 && !retry && !endpoint.includes('/auth/refresh-token')) {
+  if (response.status === 401 && !retry && !endpoint.includes('/auth/refresh-token') && !endpoint.includes('/auth/login') && !endpoint.includes('/auth/register')) {
     const refreshResponse = await fetch(`${baseURL}/auth/refresh-token`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

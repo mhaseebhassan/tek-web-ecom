@@ -16,6 +16,7 @@ export default function Confetti() {
       delay: Math.random() * 2,
       duration: 2 + Math.random() * 3,
       rotate: Math.random() * 360,
+      radius: Math.random() > 0.5 ? '50%' : '2px',
     }));
     setParticles(newParticles);
   }, []);
@@ -32,7 +33,7 @@ export default function Confetti() {
             width: `${p.size}px`,
             height: `${p.size}px`,
             backgroundColor: p.color,
-            borderRadius: Math.random() > 0.5 ? '50%' : '2px',
+            borderRadius: p.radius,
             transform: `rotate(${p.rotate}deg)`,
             opacity: 0.8,
             animation: `fall ${p.duration}s linear ${p.delay}s forwards`,

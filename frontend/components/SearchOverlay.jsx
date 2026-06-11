@@ -104,7 +104,7 @@ export default function SearchOverlay({ isOpen, onClose }) {
               ))}
             </div>
           ) : (
-            <p className="py-14 text-center text-sm font-semibold text-muted-foreground">No results for "{query}"</p>
+            <p className="py-14 text-center text-sm font-semibold text-muted-foreground">No results for &quot;{query}&quot;</p>
           )}
         </div>
 

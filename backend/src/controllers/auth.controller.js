@@ -76,6 +76,10 @@ exports.refreshToken = asyncHandler(async (req, res, next) => {
     return next(new ApiError(401, 'Refresh token expired or revoked. Please login again.'));
   }
 
+  if (!storedToken.user || !storedToken.user.isActive) {
+    return next(new ApiError(401, 'User no longer exists or is inactive'));
+  }
+
   const accessToken = generateAccessToken(storedToken.user._id, storedToken.user.role);
   const { refreshToken: newRefreshToken } = await generateRefreshToken(storedToken.user._id, req.ip);
 
