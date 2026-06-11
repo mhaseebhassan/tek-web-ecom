@@ -1,270 +1,209 @@
-# Tekron E-Commerce — Complete Codebase Walkthrough (Simple Edition)
+# Tekron E-Commerce — The Ultimate Codebase Walkthrough
 
-> Every single file in the frontend (47 files) and backend (57 files) mapped out. This uses the **Fancy Restaurant** analogy to explain what every single file actually does in simple English, so you can easily understand and explain the architecture during your viva.
+> This document maps out **every single file** in the frontend (47 files) and backend (57 files). For every file and concept, it provides both the **Technical Explanation** (the exact engineering terms you need to say in your viva) AND the **Simple Analogy** (so you intuitively understand how it works).
 
 ---
 
 # Part 1: Architecture Overview
 
-Imagine your e-commerce app is a **Fancy Restaurant**.
-
-* **Frontend (Next.js)** = The **Dining Area**. It's what the customers see (menus, tables, lights).
-* **Backend (Express.js)** = The **Waiter**. The waiter takes the customer's order from the dining area to the kitchen.
-* **Database (MongoDB)** = The **Kitchen's Filing Cabinet**. Safely stores food recipes (Products), employee records (Users), and old receipts (Orders).
-* **Cache (Redis)** = The Waiter's **Sticky Note**. Instead of walking to the kitchen to ask "what is the soup of the day?" every 5 seconds, the waiter writes it on a sticky note for instant answers.
-* **Real-time (Socket.IO)** = A **Walkie-Talkie**. When a customer's order is ready, the kitchen buzzes the walkie-talkie to tell the waiter instantly without waiting to be asked.
-* **Authentication (JWT)** = A **VIP Wristband**. Instead of checking ID on every page, we give logged-in users a mathematical wristband.
-
 ```mermaid
 graph TB
-    subgraph Frontend["Frontend (Dining Area - Next.js)"]
-        Pages["Pages (Rooms)"]
-        Components["Components (LEGO pieces)"]
-        Contexts["Context (Memory - Auth/Cart)"]
-        API["API Fetch (Sending the order)"]
+    subgraph Frontend["Frontend (Next.js - Port 3000)"]
+        Pages["App Router Pages"]
+        Components["Reusable Components"]
+        Contexts["Context (State Management)"]
+        API["API Fetch Wrapper"]
     end
 
-    subgraph Backend["Backend (The Waiter - Express.js)"]
-        Routes["Routes (The Map)"]
-        Middleware["Middlewares (Security Guards)"]
-        Controllers["Controllers (Managers)"]
-        Services["Services (Workers)"]
-        Repos["Repositories (Librarians)"]
-        Models["Models (Filing Cabinets)"]
+    subgraph Backend["Backend (Express.js - Port 5000)"]
+        Routes["Routes"]
+        Middleware["Middlewares"]
+        Controllers["Controllers"]
+        Services["Services"]
+        Repos["Repositories"]
+        Models["Mongoose Models"]
     end
 
-    subgraph Data["Data Layer (The Kitchen)"]
-        MongoDB["MongoDB (Main Storage)"]
-        Redis["Redis (Sticky Note)"]
+    subgraph Data["Data Layer"]
+        MongoDB["MongoDB (Port 27017)"]
+        Redis["Redis (Port 6379)"]
     end
 
     subgraph Realtime["Real-Time"]
-        SocketIO["Socket.IO (Walkie-Talkie)"]
+        SocketIO["Socket.IO"]
     end
 
     Pages --> API
     API -->|HTTP Request| Routes
     Routes --> Middleware --> Controllers --> Services --> Repos --> Models --> MongoDB
-    Controllers -.->|Check sticky note| Redis
-    Services -.->|Buzz walkie-talkie| SocketIO
-    SocketIO -.->|Update user screen instantly| Pages
+    Controllers -.->|Cache Read/Write| Redis
+    Services -.->|Emit Events| SocketIO
+    SocketIO -.->|Update UI Instantly| Pages
 ```
+
+### The Big Picture
+* **Technical**: We use a decoupled, layered architecture. The Next.js frontend communicates with a RESTful Express.js backend via HTTP. The backend follows the Controller-Service-Repository pattern, utilizing MongoDB for persistent storage, Redis for stateless caching, and WebSockets (Socket.IO) for real-time bidirectional events.
+* **Analogy (The Restaurant)**: The Frontend is the Dining Area where customers sit. The Backend is the Waiter taking orders to the Kitchen. MongoDB is the Kitchen's filing cabinet holding recipes. Redis is the Waiter's sticky note for fast answers. Socket.IO is a walkie-talkie connecting the Kitchen instantly to the Waiter.
 
 ---
 
 # Part 2: Backend (Express.js)
+*Location: `/backend` folder*
 
-## 2.1 Root Files (The Managers)
-
-* **`package.json`**: The shopping list of tools we bought (Express, Mongoose, Redis, etc.).
-* **`server.js`**: The Main Power Switch. It turns on the server, connects to MongoDB (the Kitchen), connects to Redis (the Sticky Note), and turns on the Socket.IO walkie-talkies.
+## 2.1 Root Files
+* **`package.json`**:
+  * **Technical**: Project manifest using CommonJS modules. Defines dependencies like `express`, `mongoose`, `redis`, `socket.io`, `bcryptjs`, and `joi`.
+  * **Analogy**: The shopping list of tools we bought to build the kitchen.
+* **`server.js`**:
+  * **Technical**: The application entry point. Bootstraps the environment (`dotenv`), establishes connections to MongoDB and Redis, attaches Socket.IO to the raw Node HTTP server, and begins listening on Port 5000. Includes an `unhandledRejection` handler for graceful shutdowns.
+  * **Analogy**: The Main Power Switch that turns on the lights, unlocks the kitchen, and turns on the walkie-talkies.
 
 ## 2.2 `src/app.js` — Express App Setup
-This is the **Rulebook**. It hires all the security guards (Middlewares) and sets up the map of where every request should go (Routes like `/api/v1/auth`).
+* **Technical**: Configures the core Express application. Registers the middleware stack sequentially (Helmet -> CORS -> Rate Limiting -> Body Parsers -> Morgan Logging) and mounts all API routes under the `/api/v1/` prefix. Ends with a global error handler.
+* **Analogy**: The Rulebook. It hires all the security guards and draws the map showing where every request should go.
 
 ## 2.3 `src/config/` — Configuration Files
-* **`db.js`**: The code that actually connects to the MongoDB Kitchen.
-* **`env.js`**: Checks that all our secret passwords (like database URLs) are loaded properly.
-* **`passport.js`**: The VIP checker setup. It verifies email and passwords.
-* **`redis.js`**: The Sticky Note setup. Connects to Redis, but won't crash the app if Redis is turned off.
+* **`db.js`**:
+  * **Technical**: Establishes the Mongoose ODM connection to `mongodb://127.0.0.1:27017/tekron`.
+* **`env.js`**:
+  * **Technical**: Validates that required environment variables exist (`requireEnv`), preventing the app from booting if critical secrets are missing in production.
+* **`passport.js`**:
+  * **Technical**: Configures the Passport Local Strategy. Verifies email/password against the DB using `bcrypt.compare`. Since the app is stateless, it intentionally omits `serializeUser`/`deserializeUser` session logic.
+* **`redis.js`**:
+  * **Technical**: Creates a Redis client singleton with graceful degradation (exponential backoff reconnects). If Redis fails, the app continues to work without caching.
 
-## 2.4 `src/middlewares/` — The Security Guards (8 Files)
-Middlewares are checkpoints every request must pass through.
-* **`async.middleware.js`**: A helper that stops the app from crashing if a worker makes a mistake (catches errors).
-* **`auth.middleware.js`**: The VIP Checker. Looks for the JWT wristband. If you don't have it, you get a 401 error.
-* **`cache.middleware.js`**: The Sticky Note Reader. Checks Redis to see if we already know the answer to a request before bothering the database.
-* **`conditional.middleware.js`**: A helper to sometimes skip certain rules depending on the route.
-* **`error.middleware.js`**: The Complaint Desk. Translates ugly code errors into nice, readable messages for the user.
-* **`rateLimit.middleware.js`**: The Bouncer. If one IP address tries to guess a password 100 times in a minute, the bouncer temporarily bans them.
-* **`upload.middleware.js`**: Handles saving picture uploads to the hard drive.
-* **`validate.middleware.js`**: The strict Spellchecker (uses Joi). Deletes bad or malicious data before it reaches the database.
+## 2.4 `src/middlewares/` — The Security Guards
+* **`helmet` (in app.js)**:
+  * **Technical**: Sets HTTP security headers (CSP, X-Frame-Options) to mitigate XSS and clickjacking.
+  * **Analogy**: The Bodyguard locking hidden doors to stop hackers.
+* **`rateLimit.middleware.js`**:
+  * **Technical**: Uses `express-rate-limit` to restrict IPs to 100 requests/15m globally, preventing DDoS and brute-force attacks.
+  * **Analogy**: The Bouncer stopping a single person from spamming the waiter.
+* **`validate.middleware.js` (uses Joi)**:
+  * **Technical**: Validates `req.body` against a strict Joi schema. Uses `stripUnknown: true` to silently drop any malicious/unexpected fields from the JSON payload.
+  * **Analogy**: The strict Spellchecker that deletes bad inputs before they reach the database.
+* **`auth.middleware.js`**:
+  * **Technical**: Extracts the `Bearer` token from the `Authorization` header, mathematically verifies the JWT signature, and attaches the decoded `req.user`. Handles Role-Based Access Control (RBAC).
+  * **Analogy**: The VIP Checker looking for your secure wristband before letting you into the boss's room.
+* **`cache.middleware.js`**:
+  * **Technical**: Intercepts `res.json()`. On a cache hit, it serves the JSON string directly from Redis in memory. On a miss, it executes the query and caches the result with a TTL (Time-To-Live).
+  * **Analogy**: The Sticky Note Reader that remembers answers so we don't bother the database.
+* **`async.middleware.js`**:
+  * **Technical**: A high-order function wrapping controllers in `Promise.resolve().catch(next)` to eliminate repetitive `try/catch` blocks.
+* **`error.middleware.js`**:
+  * **Technical**: The global error boundary. Catches Mongoose `CastError` or `TokenExpiredError` and standardizes them into clean JSON responses.
 
-## 2.5 `src/models/` — Mongoose Schemas (8 Models)
-This defines exactly *how* we store things in the MongoDB filing cabinet.
-* **`user.model.js`**: Stores email, hashed password (using `bcryptjs`), and role (`admin` or `customer`).
-* **`product.model.js`**: Stores product name, price, stock count, and images.
-* **`order.model.js`**: Stores who bought what. **Smart trick:** Instead of just pointing to the product ID, we take a "snapshot" of the price at checkout so if the price changes tomorrow, old receipts stay the same!
-* **`cart.model.js`**: Saves the user's shopping basket.
-* **`review.model.js`**: Saves 1-5 star ratings and comments.
-* **`notification.model.js`**: Saves messages for users or admins.
-* **`refreshToken.model.js`**: Remembers the long-lasting VIP wristbands to keep users logged in securely.
-* **`storeSettings.model.js`**: Saves store configuration like tax rates and shipping fees.
+## 2.5 `src/models/` — Mongoose Schemas (The Filing Cabinets)
+* **`user.model.js`**:
+  * **Technical**: Enforces required fields, uniqueness on `email`, and uses a `pre('save')` hook to automatically hash the password with `bcryptjs` (10 salt rounds) before writing to the disk.
+* **`product.model.js`**:
+  * **Technical**: Stores product data. Uses `isActive` for "soft deletion" (hiding products without actually deleting the row).
+* **`order.model.js`**:
+  * **Technical**: Denormalizes the order items. It embeds a hardcopy snapshot of the product name, image, and price directly inside the order document at checkout.
+  * **Analogy**: Taking a photograph of the price tag. If the admin changes the price tomorrow, the old receipt stays historically accurate.
+* **`cart.model.js`**: Unique constraint per user to store cart state.
+* **`review.model.js`**: Compound unique index `{ user, product }` ensuring one review per user per product.
+* **`refreshToken.model.js`**: Stores a SHA-256 hash of the long-lived refresh token to prevent token reuse attacks.
+* **`storeSettings.model.js`**: Singleton document for global store configs (tax rate, currency).
 
-## 2.6 `src/controllers/` — Controller Layer (9 Controllers)
-The Managers. They take requests from the Routes and assign them to the Workers (Services).
-* **`auth.controller.js`**: Handles login/logout. Generates the JWT Access Token (wristband) and Refresh Token.
-* **`admin.controller.js`**: Gathers stats (revenue, orders) for the admin dashboard.
-* **`product.controller.js`**: Handles adding, editing, or deleting products.
-* **`cart.controller.js`**: Handles adding items to the cart.
-* **`order.controller.js`**: Thin manager that passes order placement to the `orderService`.
-* **`review.controller.js`**: Handles product reviews.
-* **`contact.controller.js`**: Handles the "Contact Us" form.
-* **`notification.controller.js`**: Lists notifications for the user.
-* **`upload.controller.js`**: Returns the file path after an image is uploaded.
+## 2.6 `src/controllers/` — Controller Layer (The Managers)
+* **`auth.controller.js`**:
+  * **Technical**: Handles login/registration. Issues short-lived JWT Access Tokens to memory, and sets the long-lived Refresh Token in an `httpOnly` cookie to prevent JavaScript access (XSS protection).
+* **`product.controller.js`**: Handles CRUD. Calls `serializeProduct()` to hide sensitive fields (like exact stock counts) from non-admin users.
+* **`order.controller.js`**: Delegates HTTP requests directly to the Service layer.
+* **`admin.controller.js`**: Aggregates MongoDB queries using pipelines (`$match`, `$group`) to calculate total revenue and 30-day analytics.
+* **Others**: `cart.controller.js`, `review.controller.js`, `contact.controller.js`, `notification.controller.js`, `upload.controller.js`.
 
-## 2.7 `src/services/` — Business Logic Layer
-The actual Workers who do the hard math and complex logic.
-* **`order.service.js`**: The hardest worker (256 lines). It calculates tax/shipping, atomically deducts the item from the kitchen's inventory (so two people can't buy the last item at the exact same time), and buzzes the walkie-talkie (`new-order`) to alert the admin.
-* **`product.service.js`**: Handles complex searching, filtering, and sorting of products.
-* **`review.service.js`**: Automatically recalculates the average 5-star rating of a product every time a new review is added.
+## 2.7 `src/services/` — Business Logic Layer (The Workers)
+* **`order.service.js` (Most Complex File)**:
+  * **Technical**: Calculates tax. Executes an **atomic update** to decrement stock (`$inc: { stock: -quantity }`) paired with a guard (`stock: { $gte: quantity }`) to prevent race conditions (two people buying the last item). Finally, emits a Socket.IO event.
+  * **Analogy**: The worker who carefully takes your money, updates the inventory list so nobody else can buy it, and buzzes the walkie-talkie to alert the kitchen.
+* **`product.service.js`**: Handles regex-based search queries and pagination.
+* **`review.service.js`**: Triggers a MongoDB aggregation to recalculate the `ratingAverage` every time a review is added.
 
-## 2.8 `src/repositories/` — Data Access Layer
-The Librarians. They are the only ones allowed to actually open the MongoDB filing cabinets.
-* **`order.repository.js`**: Finds and saves orders in the database.
-* **`product.repository.js`**: Finds and saves products in the database.
+## 2.8 `src/repositories/` — Data Access Layer (The Librarians)
+* **`order.repository.js` & `product.repository.js`**:
+  * **Technical**: Abstracts raw Mongoose queries (`findById`, `updateOne`) away from the business logic.
+  * **Analogy**: The librarians. They are the *only* ones allowed to physically open the MongoDB filing cabinets and hand the folders to the workers.
 
-## 2.9 `src/routes/` — Route Definitions (9 Files)
-The Map of doors in the restaurant.
-* **`auth.routes.js`**: Maps URLs like `POST /login` and `POST /register` to the Auth Controller.
-* **`product.routes.js`**: Maps URLs like `GET /products` to the Product Controller.
-* **`order.routes.js`**: Maps URLs like `POST /orders`.
-* (Also contains routes for admin, cart, contact, notifications, reviews, and uploads).
+## 2.9 `src/routes/` & 2.10 `src/validators/` (The Map & The Rules)
+* **`routes/*.js`**: Defines the endpoints (`POST /auth/login`, `GET /products`). Attaches specific middlewares (like `protect`, `authLimiter`) to specific routes.
+* **`validators/*.js`**: Defines the Joi object schemas (e.g., `Joi.string().email()`, `Joi.number().min(1).max(5)`).
 
-## 2.10 `src/validators/` — Joi Schemas (6 Files)
-The exact spellcheck rules for the `validate.middleware.js`.
-* **`auth.validator.js`**: Rules saying "email must be valid format, password must be at least 6 characters".
-* **`cart.validator.js`**: Rules saying "quantity must be between 1 and 99".
-* **`order.validator.js`**: Rules ensuring a shipping address is provided.
-* **`product.validator.js`**: Rules for creating a product.
-* **`review.validator.js`**: Rules saying "rating must be a number between 1 and 5".
-* **`contact.validator.js`**: Rules for the contact form.
-
-## 2.11 `src/sockets/socket.js` — WebSocket Layer
-The Walkie-Talkie setup. It extracts the JWT wristband to verify the user, then creates specific "rooms". This ensures a user only hears updates for their own orders, while admins join a special `admin_room` to hear all new orders.
-
-## 2.12 `src/utils/` — Utilities
-* **`ApiError.js`**: A custom tool to easily create error messages.
-* **`generateTokens.js`**: The machine that mathematically creates the JWT wristbands.
-* **`uploads.js`**: Ensures the `/uploads` folder actually exists on the hard drive.
-
-## 2.13 `scripts/` — Database Seeders
-* **`seed.js`**, **`seedAdmin.js`**, **`seedProducts.js`**: Scripts you can run to instantly fill the empty database with 13 sample Apple products and a default admin account.
+## 2.11 `src/sockets/socket.js` — WebSockets (The Walkie-Talkies)
+* **Technical**: Upgrades HTTP to WebSocket. Extracts the JWT from the handshake, verifies the user, and assigns them to an isolated Socket "room" (`user:{id}`). Admins join `admin_room`. This allows targeted server-to-client event pushing (`order-status-updated`).
 
 ---
 
 # Part 3: Frontend (Next.js)
+*Location: `/frontend` folder*
 
 ## 3.1 Root Configuration
-* **`package.json`**: The tools we used (React, Tailwind, Next.js).
-* **`next.config.js`**: Rules for Next.js. We use it to proxy `/api/v1` requests so we don't get CORS (Cross-Origin) errors during development.
-* **`tailwind.config.js`**: Where we defined our custom restaurant colors (Primary Gold, Accent Blue) and custom CSS animations (like `fadeLift` and `shimmer`).
+* **`package.json`**: React 18, TailwindCSS, Socket.IO-Client.
+* **`next.config.js`**:
+  * **Technical**: Configures API `rewrites()` to proxy `/api/v1` to `localhost:5000` during development, bypassing browser CORS restrictions.
+* **`tailwind.config.js`**:
+  * **Technical**: Extends the default theme. Maps CSS variables (`--primary`) to Tailwind utility classes, and defines custom `@keyframes` for hardware-accelerated animations (`fadeLift`, `cartPop`).
 
-## 3.2 Global Styles — The Design System
-* **`app/globals.css`**: How we made the app look premium. We added a physical "Noise Texture" (like old TV static) mixed with a dark radial gradient for the background. We also created "Glassmorphism" classes here using `backdrop-filter: blur(...)` to make boxes look like frosted glass.
+## 3.2 Global Styles (`app/globals.css`)
+* **Technical**: Defines root HSL color variables. Applies a base64-encoded SVG noise texture to the `body` background merged with a radial gradient. Defines `.surface-card` utility classes using `backdrop-filter: blur(...)`.
+* **Analogy**: The paint and decor. We made it look premium by adding physical "TV static" texture and frosted glass to everything.
 
-## 3.3 App Layout & Providers
-* **`app/layout.jsx`**: The outer shell of the website. It loads the Google Fonts.
-* **`app/providers.jsx`**: Wraps the entire app in the Auth, Cart, and Theme memory (Contexts) so every page has access to them.
+## 3.3 Context / State Management (The Memory)
+* **`AuthContext.jsx`**:
+  * **Technical**: React Context provider. Holds the `user` object in state. On mount, silently calls `/auth/refresh-token` to auto-login returning users.
+* **`CartContext.jsx`**:
+  * **Technical**: Manages cart state. If unauthenticated, it persists to `window.localStorage`. Upon login, it executes a smart merge, syncing the local cart with the backend database.
 
-## 3.4 Context (State Management / The Memory)
-* **`context/AuthContext.jsx`**: Remembers if you are wearing the VIP wristband (JWT token) so the frontend knows to show you the "My Orders" button instead of "Login".
-* **`context/CartContext.jsx`**: The Shopping Basket. If you aren't logged in, it saves your items in your browser's `localStorage`. When you log in, it automatically moves them to the server.
-* **`context/ThemeContext.jsx`**: Forces Dark Mode everywhere.
+## 3.4 API Utilities (`lib/api.js`)
+* **Technical**: A custom wrapper around the native `fetch` API. It automatically intercepts 401 Unauthorized errors, requests a new access token using the httpOnly refresh cookie, and seamlessly retries the original failed request.
 
-## 3.5 `lib/` — Utilities
-* **`lib/api.js`**: The custom `fetch` tool. It automatically attaches your VIP wristband (token) to every single request you send to the backend.
-* **`lib/images.js`**: Fixes image URLs so they load correctly.
-* **`lib/products.js`**: Helpers for checking if a product is out of stock.
+## 3.5 App Router Pages (The Rooms)
+* **`app/(site)/page.js`**: Home page with `HeroSlideshow`.
+* **`app/(site)/products/page.jsx`**: Product catalog with debounce searching.
+* **`app/(site)/checkout/page.jsx`**: Checkout flow supporting both guest and authenticated users. Triggers the `Confetti` component on success.
+* **`app/(site)/orders/page.jsx`**: Mounts the `socket.on('order-status-updated')` listener to re-fetch orders in real time.
+* **`app/admin/page.jsx`**: Admin dashboard protected by layout route guards. Listens for `socket.on('new-order')` to update revenue live.
+* **Others**: `cart`, `about`, `login`, `register`, `admin/analytics`, `admin/products`.
 
-## 3.6 Customer-Facing Pages (`app/(site)/`)
-Next.js uses folders to automatically create physical web pages.
-* **`layout.jsx`**: The wrapper that shows the Navbar, Cart Drawer, and Footer on every page.
-* **`page.js`**: The Home Page. Contains the slideshow of iPhones/MacBooks.
-* **`about/page.js`**: The About Page.
-* **`products/page.jsx`**: The Catalog. Shows all products and has a search bar.
-* **`products/[slug]/page.js`**: The specific Product Detail page.
-* **`cart/page.jsx`**: The Cart Page.
-* **`checkout/page.jsx`**: The Checkout page. Shoots Confetti 🎉 across the screen when you finish!
-* **`orders/page.jsx`**: My Orders page.
-* **`auth/login/page.jsx`**: The Login page.
-* **`auth/register/page.jsx`**: The Register page.
-
-## 3.7 All Components — Deep Dive (`components/`)
-Instead of building a new button every time, we build it once and reuse it (like LEGO pieces).
-* **`HeroSlideshow.js`**: The auto-rotating images on the home page.
-* **`ProductCard.js`**: The beautiful glass box holding a product. It uses 3D CSS `perspective` to physically tilt when your mouse moves over it.
-* **`Navbar.jsx`**: The top menu. It uses `backdrop-blur` to turn into frosted glass when you scroll down.
-* **`SearchOverlay.jsx`**: The full-screen search screen that pops up.
-* **`CartDrawer.jsx`**: The cart menu that slides in from the right.
-* **`BackgroundShapes.jsx`**: 4 large colorful circles (cyan, amber, teal). They have a massive CSS `blur` filter applied and use an `@keyframes float` animation to drift around the screen over 30 seconds.
-* **`ScrollReveal.jsx`**: Uses the browser's `IntersectionObserver` to magically fade text in as you scroll down the page.
-* **`Confetti.jsx`**: The code that shoots the confetti.
-* **`SectionDivider.jsx`**: The glowing line between sections.
-* **Others**: `ProductQuickView.jsx`, `Logo.jsx`, `BackToTop.jsx`, `SafeImage.jsx`, `Footer.jsx`, `CatalogToolbar.jsx`, `ImageUploadField.jsx`, `Skeleton.jsx`, `EmptyState.jsx`, `FeatureCard.jsx`.
-
-## 3.8 Admin Section
-The secret boss rooms.
-* **`app/admin/layout.jsx`**: The sidebar navigation for admins.
-* **`app/admin/page.jsx`**: The Dashboard. It listens for Socket.IO events to update the revenue chart live.
-* **`app/admin/analytics/page.jsx`**: The page with custom SVG graphs showing sales over time.
-* **`app/admin/customers/page.jsx`**: List of all customers.
-* **`app/admin/orders/page.jsx`**: Allows admin to change order statuses.
-* **`app/admin/products/page.jsx`**: Allows admin to add/edit products.
-* **`app/admin/settings/page.jsx`**: Store settings.
+## 3.6 Components (The LEGO Pieces)
+* **`ProductCard.js`**:
+  * **Technical**: Calculates pointer coordinates relative to the bounding box to apply CSS `transform: perspective(900px) rotateX(...) rotateY(...)` for a 3D tilt effect.
+* **`ScrollReveal.jsx`**:
+  * **Technical**: Utilizes the native `IntersectionObserver` API. When an element intersects the viewport threshold, it toggles Tailwind opacity and translation classes.
+* **`BackgroundShapes.jsx`**:
+  * **Technical**: Absolute-positioned `div`s with `blur-[120px]` and infinite CSS `@keyframes float` to create the moving aurora effect without utilizing heavy JS requestAnimationFrame loops.
+* **`Navbar.jsx`**: Uses scroll event listeners to dynamically increase the `backdrop-blur` intensity as the user scrolls down.
+* **Others**: `CartDrawer`, `Confetti`, `SearchOverlay`, `HeroSlideshow`, `ImageUploadField`.
 
 ---
 
-# Part 4: Complete Animation & Effect Inventory
-
-| Effect | How it works (ELI5) | Where Used |
-|--------|---------------------|-----------|
-| **3D Card Tilt** | Tracks your mouse and rotates the box up to 3.5 degrees in 3D space. | ProductCard |
-| **Glassmorphism** | Uses `backdrop-blur-xl` to make semi-transparent boxes look like frosted glass. | Panels, cards, navbar |
-| **Aurora Sheen** | A gradient of colors sweeping across the screen to look like glowing lights. | Cards, hero |
-| **Scroll Reveal** | Waits until an element scrolls into view, then fades it in. | All pages |
-| **Hero Slideshow** | Slowly scales up the image over 2 seconds, then switches to the next. | Home page hero |
-| **Floating Blobs** | CSS animations that slowly bounce big blurred circles up and down over 30 seconds. | BackgroundShapes |
-| **Shimmer Loading** | A gradient sweeping horizontally to show something is loading. | Skeletons |
-
----
-
-# Part 5: Backend Concepts Checklist
-
-| Concept | How it works (ELI5) | File(s) |
-|---------|---------------------|---------|
-| ✅ **Helmet** | The Bodyguard adding secret security headers. | `app.js` |
-| ✅ **Stateless Cache** | The Redis Sticky Note remembering answers so we don't bother the database. | `cache.middleware.js` |
-| ✅ **Rate Limiting** | The Bouncer stopping spammers. | `rateLimit.middleware.js` |
-| ✅ **JWT Auth** | The VIP Wristband used instead of traditional login sessions. | `auth.controller.js` |
-| ✅ **Input Validation** | The Joi Spellchecker deleting malicious input. | `validators/` |
-| ✅ **WebSockets** | The Socket.IO Walkie-Talkie for instant live updates. | `socket.js` |
-| ✅ **Atomic Stock Management** | Carefully deducting stock so two people can't buy the exact same final item at once. | `order.service.js` |
-
----
-
-# Part 6: Expected Viva Questions & Answers
+# Part 4: Technical Viva Q&A
 
 **Q1: Why did you choose Next.js instead of regular React?**
-*A1:* "Next.js provides an App Router which allows for server-side rendering, better SEO, and optimized asset loading. It's like a restaurant that pre-cooks the food—when a user visits, the page loads instantly because Next.js already prepared the HTML on the server. Regular React makes the user's browser do all the cooking, which is slower."
+* **Technical**: "Next.js provides the App Router with Server-Side Rendering (SSR). This reduces the initial JavaScript payload to the browser, offering a faster First Contentful Paint (FCP) and significantly better SEO compared to a traditional Client-Side Rendered (CSR) SPA."
+* **Analogy**: "It's like a restaurant that pre-cooks the food. When a user visits, the page loads instantly because the server already prepared the HTML. Regular React makes the user's browser do all the cooking, which is slower."
 
 **Q2: How does your authentication system work? Are you using sessions?**
-*A2:* "No, it's completely stateless. I used JWT (JSON Web Tokens), which is like a cryptographic VIP wristband. When a user logs in, the server generates a short-lived access token (kept in memory) and a long-lived refresh token stored securely in an HTTP-only cookie. We also implemented Refresh Token Rotation to automatically revoke old refresh tokens and issue new ones, preventing token reuse attacks."
+* **Technical**: "No, it is entirely stateless. We implemented JWT (JSON Web Tokens). Upon login, the server issues a short-lived access token (kept in memory) and a long-lived refresh token (stored securely in an `httpOnly` cookie to prevent XSS). We also utilized Refresh Token Rotation to prevent token reuse."
+* **Analogy**: "It's like giving users a cryptographic VIP wristband. The server doesn't need to remember who is logged in via a database session; it just mathematically verifies the wristband on every request."
 
-**Q3: How are you handling real-time updates for orders?**
-*A3:* "I integrated Socket.IO, which is like a two-way walkie-talkie. When an order status is changed in the admin panel, the backend Express service emits an `order-status-updated` event targeting a specific user's 'room'. The Next.js frontend listens for this and updates the UI instantly without needing a page refresh."
+**Q3: How are you handling real-time updates?**
+* **Technical**: "I integrated Socket.IO for WebSockets. When a mutation occurs (like an order status changing in the DB), the Express service emits an event targeting a specific `user:{id}` room. The Next.js client listens for this event and triggers a React state update instantly."
+* **Analogy**: "It's a two-way walkie-talkie. Instead of the browser constantly asking the server 'is my order ready?', the server just buzzes the browser the exact second the status changes."
 
 **Q4: How did you optimize the backend performance?**
-*A4:* "I implemented a stateless Redis caching layer. Redis is like the server's sticky note. For example, the public product catalog is cached in Redis with a Time-To-Live (TTL). When a request comes in, a middleware checks Redis first, and if there's a cache hit, it bypasses the database query entirely, reducing latency."
+* **Technical**: "I implemented a stateless Redis caching layer via middleware. For read-heavy endpoints like the product catalog, the API attempts to retrieve the JSON response from Redis memory. On a cache hit, it bypasses the MongoDB query completely, reducing latency from ~100ms down to ~5ms."
+* **Analogy**: "Redis is the server's sticky note. Instead of walking to the kitchen filing cabinet every time, the waiter writes the answer on a sticky note and serves the next 100 customers instantly."
 
 **Q5: What security measures did you implement?**
-*A5:* "I used several layers: Helmet.js (the bodyguard) for secure HTTP headers, express-rate-limit (the bouncer) to prevent brute-force attacks on authentication routes, Joi schemas to strictly validate and sanitize all incoming JSON data, and bcrypt with 10 salt rounds to hash passwords before storing them."
+* **Technical**: "I employed defense-in-depth: `Helmet.js` sets secure HTTP headers. `express-rate-limit` prevents brute-forcing. `Joi` strictly sanitizes incoming JSON payloads. Finally, `bcryptjs` utilizes 10 salt rounds to hash passwords, ensuring plain-text passwords are never stored."
+* **Analogy**: "Helmet is the bodyguard locking doors. The rate-limiter is the bouncer stopping spammers. Joi is the spellchecker deleting bad data."
 
 **Q6: How did you design the database for Orders? What happens if a product's price changes?**
-*A6:* "In Mongoose, instead of just linking an order to a Product ID, I denormalized the data. The order item subdocument takes a 'snapshot' of the product's name, price, and image at the exact time of checkout. This ensures the historical receipt is immutable, even if the admin deletes the product or changes its price tomorrow."
+* **Technical**: "In MongoDB, I intentionally denormalized the order item subdocuments. Instead of merely storing an `ObjectId` reference to the Product, the system takes a snapshot of the product's name and price at checkout time. This ensures the historical integrity of the receipt."
+* **Analogy**: "We take a photograph of the price tag when you check out. If the admin deletes the product or doubles the price tomorrow, your old receipt doesn't change."
 
-**Q7: How did you implement animations without making the app slow?**
-*A7:* "Heavy Javascript animations slow down computers. Instead, I avoided JavaScript animation libraries and relied on hardware-accelerated CSS animations via Tailwind keyframes (like `translate` and `scale`). CSS utilizes the computer's GPU, which makes the sliding and fading buttery smooth. For scroll animations, I built a lightweight `ScrollReveal` component using the native IntersectionObserver API."
-
----
-
-# Part 7: Core Libraries Dictionary
-
-* **Next.js**: The React framework that builds the frontend UI and handles routing.
-* **Express.js**: The Node.js web framework that acts as our backend API server.
-* **MongoDB & Mongoose**: Our NoSQL database (MongoDB) and the tool we use to enforce strict rules on the data (Mongoose).
-* **Redis**: The super-fast, in-memory cache that stores temporary data to speed up API responses.
-* **Socket.IO**: The WebSockets library that enables instant, real-time communication between frontend and backend.
-* **JWT**: A secure, mathematical way to verify logged-in users without storing sessions in the database.
-* **Tailwind CSS**: A tool that lets us style the website quickly using small utility classes like `text-center` and `blur-xl`.
-* **Joi**: A security tool that checks and sanitizes all incoming data before it touches our database.
-* **Helmet**: A security middleware that protects the app from common web exploits by setting HTTP headers.
+**Q7: How did you implement smooth animations?**
+* **Technical**: "I avoided JS-based animation loops (like GSAP) and relied on hardware-accelerated CSS properties (`transform: translate` and `scale`) via Tailwind keyframes. CSS animations are offloaded to the GPU, preventing main-thread blocking and ensuring 60fps performance."
+* **Analogy**: "Heavy Javascript animations slow down computers. By using CSS, we tell the computer's Graphics Card to handle the smooth sliding and fading, which works perfectly even on slow phones."
