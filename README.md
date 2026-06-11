@@ -6,6 +6,7 @@ Tekron is a state-of-the-art modern e-commerce application built with a premium 
 - **Frontend**: Next.js 15 (App Router), TailwindCSS, Context API
 - **Backend**: Node.js, Express, Mongoose
 - **Database**: MongoDB (Containerized)
+- **Caching**: Redis
 - **Message Broker**: Apache Kafka & Zookeeper (Confluent 7.5.0) for high-performance decoupled event processing.
 - **Real-Time**: Socket.IO for live order status updates
 - **PDF Generation**: Puppeteer (Beautiful HTML/Tailwind rendering)
@@ -16,14 +17,14 @@ You can launch the entire stack using the included batch script.
 1. Ensure Docker Desktop is running.
 2. Double-click the `start.bat` file in the root folder.
 3. This will automatically:
-   - Spin up Kafka and Zookeeper via Docker Compose
+   - Spin up Kafka, Zookeeper, and Redis via Docker Compose
    - Start the Backend Server on `http://localhost:5000`
    - Start the Frontend Server on `http://localhost:3000`
 
 ### End-to-End Demo
 The application includes a fully verified, pristine checkout flow. When an order is placed, Kafka instantly picks up the `new_order` event and asynchronously generates a beautifully branded PDF invoice in the background without blocking the UI.
 
-https://github.com/mhaseebhassan/tek-web-ecom/raw/main/e2e_demo.webm
+![Tekron Homepage Screenshot](./screenshot.png)
 
 ## Features
 - Complete Cart & Checkout functionality
