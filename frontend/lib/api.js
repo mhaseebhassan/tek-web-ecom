@@ -64,6 +64,12 @@ async function fetchWithAuth(endpoint, options = {}, retry = false) {
   }
 
   const contentType = response.headers.get('content-type');
+  
+  if (options.responseType === 'blob' && response.ok) {
+    const blob = await response.blob();
+    return { data: blob, status: response.status };
+  }
+
   const json = contentType?.includes('application/json') ? await response.json() : null;
 
   if (!response.ok) {

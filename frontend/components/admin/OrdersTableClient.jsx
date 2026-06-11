@@ -163,11 +163,39 @@ export default function OrdersTableClient({ orders }) {
                         </div>
                       </td>
                       <td className="px-8 py-5">
-                        <OrderStatusControl
-                          orderId={order.id}
-                          initialStatus={order.status}
-                          initialPaymentStatus={order.paymentStatus}
-                        />
+                        <div className="flex flex-col gap-3">
+                          <OrderStatusControl
+                            orderId={order.id}
+                            initialStatus={order.status}
+                            initialPaymentStatus={order.paymentStatus}
+                          />
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              let toastId;
+                              try {
+                                const toast = (await import('react-hot-toast')).default;
+                                const api = (await import('@/lib/api')).default;
+                                toastId = toast.loading('Downloading invoice...');
+                                const response = await api.get(`/orders/${order.id}/invoice`, { responseType: 'blob' });
+                                const url = window.URL.createObjectURL(new Blob([response.data]));
+                                const link = document.createElement('a');
+                                link.href = url;
+                                link.setAttribute('download', `invoice_${order.id}.pdf`);
+                                document.body.appendChild(link);
+                                link.click();
+                                link.parentNode.removeChild(link);
+                                toast.success('Invoice downloaded', { id: toastId });
+                              } catch (err) {
+                                const toast = (await import('react-hot-toast')).default;
+                                toast.error('Invoice is still generating or not found', { id: toastId });
+                              }
+                            }}
+                            className="btn-outline border-primary/25 text-primary hover:border-primary/40 text-xs py-1"
+                          >
+                            Download Invoice
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );

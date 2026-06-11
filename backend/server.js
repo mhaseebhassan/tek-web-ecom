@@ -4,9 +4,14 @@ const app = require('./src/app');
 const connectDB = require('./src/config/db');
 const { connectRedis } = require('./src/config/redis');
 const { initSocket } = require('./src/sockets/socket');
+const { connectKafka } = require('./src/config/kafka');
+const { startKafkaWorker } = require('./src/workers/kafka.worker');
 
 connectDB();
 connectRedis();
+connectKafka().then(() => {
+  startKafkaWorker();
+});
 
 const server = http.createServer(app);
 initSocket(server);

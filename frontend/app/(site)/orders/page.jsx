@@ -68,6 +68,24 @@ export default function OrdersPage() {
     }
   };
 
+  const downloadInvoice = async (orderId) => {
+    let toastId;
+    try {
+      toastId = toast.loading('Downloading invoice...');
+      const response = await api.get(`/orders/${orderId}/invoice`, { responseType: 'blob' });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `invoice_${orderId}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode.removeChild(link);
+      toast.success('Invoice downloaded', { id: toastId });
+    } catch (err) {
+      toast.error('Invoice is still generating or not found', { id: toastId });
+    }
+  };
+
   if (loading || isLoading) {
     return <div className="flex min-h-[60vh] items-center justify-center text-muted-foreground">Loading orders</div>;
   }
@@ -134,12 +152,21 @@ export default function OrdersPage() {
                   </div>
 
                   {['pending', 'confirmed'].includes(order.status) ? (
-                    <div className="mt-5 flex justify-end">
+                    <div className="mt-5 flex justify-end gap-3">
+                      <button type="button" onClick={() => downloadInvoice(order.id)} className="btn-outline border-primary/25 text-primary hover:border-primary/40">
+                        Download Invoice
+                      </button>
                       <button type="button" onClick={() => cancelOrder(order.id)} className="btn-outline border-rose-400/25 text-rose-300 hover:border-rose-400/40">
                         Cancel order
                       </button>
                     </div>
-                  ) : null}
+                  ) : (
+                    <div className="mt-5 flex justify-end">
+                      <button type="button" onClick={() => downloadInvoice(order.id)} className="btn-outline border-primary/25 text-primary hover:border-primary/40">
+                        Download Invoice
+                      </button>
+                    </div>
+                  )}
                 </div>
               </article>
             </ScrollReveal>

@@ -1,164 +1,39 @@
-# Tekron: Secure Real-Time MERN E-Commerce Platform
+# Tekron E-Commerce Platform
 
-Tekron is a premium tech e-commerce platform built for the **Advanced Web Technologies** lab final. It uses a **Next.js 14** storefront and a standalone **Express.js** API with **MongoDB**, **Passport Local + JWT**, **Redis caching**, and **Socket.IO** real-time notifications.
+Tekron is a state-of-the-art modern e-commerce application built with a premium dark-mode aesthetic, micro-animations, and glassmorphism. It features a robust Next.js frontend, an Express.js backend, and Event-Driven Architecture powered by Apache Kafka for asynchronous tasks like PDF Invoice generation and Real-Time Socket.IO updates.
 
 ## Tech Stack
-
-| Layer | Technology |
-|---|---|
-| Frontend | Next.js 14 (App Router), Tailwind CSS, native `fetch` API client |
-| Backend | Node.js, Express.js, Mongoose |
-| Database | MongoDB |
-| Auth | Passport Local Strategy, JWT access token, HTTP-only refresh cookie rotation |
-| Cache | Redis (graceful fallback if unavailable) |
-| Real-time | Socket.IO |
-
-## Project Structure
-
-```text
-tekron/
-├── frontend/          # Next.js storefront + admin UI
-├── backend/           # Express REST API + Socket.IO
-├── README.md
-├── ADV_WEB_FINAL_FEATURES.md
-├── MIGRATION_SUMMARY.md
-├── DELETED_OR_REMOVED_FILES.md
-└── FINAL_COMPLETION_CHECKLIST.md
-```
-
-## Requirements
-
-- Node.js 18+
-- MongoDB (`mongod` on `mongodb://127.0.0.1:27017`)
-- Redis (`redis://localhost:6379`) - optional; app runs without it
+- **Frontend**: Next.js 15 (App Router), TailwindCSS, Context API
+- **Backend**: Node.js, Express, Mongoose
+- **Database**: MongoDB (Containerized)
+- **Message Broker**: Apache Kafka & Zookeeper (Confluent 7.5.0) for high-performance decoupled event processing.
+- **Real-Time**: Socket.IO for live order status updates
+- **PDF Generation**: PDFKit (Native SVG rendering)
 
 ## Quick Start
+You can launch the entire stack using the included batch script.
 
-### 1. Install dependencies
+1. Ensure Docker Desktop is running.
+2. Double-click the `start.bat` file in the root folder.
+3. This will automatically:
+   - Spin up Kafka and Zookeeper via Docker Compose
+   - Start the Backend Server on `http://localhost:5000`
+   - Start the Frontend Server on `http://localhost:3000`
 
-```bash
-npm run install:all
-```
+### End-to-End Demo
+The application includes a fully verified, pristine checkout flow. When an order is placed, Kafka instantly picks up the `new_order` event and asynchronously generates a beautifully branded PDF invoice in the background without blocking the UI.
 
-Or separately:
+<details>
+<summary><b>Click here to view the E2E Checkout Flow Recording</b></summary>
+<br>
 
-```bash
-cd backend && npm install
-cd ../frontend && npm install
-```
+<video src="./e2e_demo.webm" controls="controls" width="100%"></video>
 
-### 2. Environment files
+</details>
 
-```bash
-cd backend
-cp .env.example .env
-
-cd ../frontend
-cp .env.local.example .env.local
-```
-
-Set strong values for `JWT_ACCESS_SECRET` and `JWT_REFRESH_SECRET` in `backend/.env`.
-
-To create an admin account, set your own values in `backend/.env` before seeding:
-
-```bash
-SEED_ADMIN_NAME=Your Admin Name
-SEED_ADMIN_EMAIL=your-admin-email@example.com
-SEED_ADMIN_PASSWORD=replace_with_a_strong_password
-```
-
-### 3. Seed database
-
-```bash
-cd backend
-npm run seed:admin
-npm run seed:products
-# or: npm run seed
-```
-
-### 4. Run servers
-
-**Terminal 1 - Backend:**
-
-```bash
-cd backend
-npm run dev
-```
-
-**Terminal 2 - Frontend:**
-
-```bash
-cd frontend
-npm run dev
-```
-
-**Or from project root (requires `npm install` at root for `concurrently`):**
-
-```bash
-npm run dev
-```
-
-Open [http://localhost:3000](http://localhost:3000).
-
-## Demo Accounts
-
-Run the seed scripts after setting your own admin values in `backend/.env`.
-Register customer accounts from `/auth/register` for checkout demos.
-
-## API Overview
-
-Base URL: `http://localhost:5000/api/v1`
-
-| Area | Endpoints |
-|---|---|
-| Health | `GET /health` |
-| Auth | `POST /auth/register`, `/login`, `/refresh-token`, `/logout`, `GET /me` |
-| Products | `GET /products`, `GET /products/:id`, admin CRUD |
-| Cart | `GET /cart`, `POST /cart/items`, `PATCH /cart/items`, `DELETE /cart/items/:id` |
-| Orders | `POST /orders`, `GET /orders`, `PATCH /orders/:id/cancel` |
-| Admin | `GET /admin/dashboard`, `/orders`, `/customers`, etc. |
-| Reviews | `GET /reviews/product/:id`, `POST` (authenticated, ordered users) |
-| Notifications | `GET /notifications`, `PATCH /notifications/:id/read` |
-| Upload | `POST /upload` (admin, multipart image) |
-
-## Security Features
-
-- Helmet, CORS whitelist (`FRONTEND_URL`), compression
-- Global + auth-specific rate limiting
-- Joi validation middleware
-- Passport Local login + hashed passwords
-- JWT access token (15m) + rotated refresh token in HTTP-only cookie
-- Role-based authorization (`customer`, `admin`)
-- Backend order total recalculation from MongoDB product prices
-- Passwords and refresh tokens are never returned in API JSON
-
-## Viva Demo Flow
-
-1. Show monorepo structure (`frontend/` + `backend/`).
-2. Login via Postman or UI -> show JWT + refresh cookie.
-3. Hit `GET /api/v1/products` twice -> show Redis `Cache HIT` in backend logs.
-4. Place order as customer -> admin dashboard receives Socket.IO `new-order` toast.
-5. Admin updates order status -> customer `/orders` receives `order-status-updated`.
-6. Show `backend/src/app.js` middleware stack and global error handler.
-
-## Docker Compose
-
-```bash
-# Create root .env with JWT_ACCESS_SECRET and JWT_REFRESH_SECRET
-docker compose up --build
-docker compose exec backend npm run seed
-```
-
-## Troubleshooting
-
-| Issue | Fix |
-|---|---|
-| `ECONNREFUSED` MongoDB | Start `mongod` or check `MONGO_URI` |
-| Redis errors in console | Start Redis or ignore - caching is disabled automatically |
-| 401 on checkout | Log in first; checkout requires authentication |
-| Admin access denied | Confirm your seeded admin email/password and role in MongoDB |
-| Images not loading | Use `/filename.png` in `frontend/public` or a full HTTPS URL |
-
----
-
-Built by [Muhammad Haseeb Hassan](https://github.com/mhaseebhassan)
+## Features
+- Complete Cart & Checkout functionality
+- Admin Dashboard with metrics and live status controls
+- Beautiful automated PDF invoice generation with native vector branding
+- Real-time user notifications via WebSockets
+- Highly scalable decoupled architecture

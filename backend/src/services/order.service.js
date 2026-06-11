@@ -4,7 +4,7 @@ const Notification = require('../models/notification.model');
 const orderRepository = require('../repositories/order.repository');
 const ApiError = require('../utils/ApiError');
 const { clearCache } = require('../middlewares/cache.middleware');
-const { getIo } = require('../sockets/socket');
+const { produceEvent } = require('../config/kafka');
 
 const ORDER_STATUSES = ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled'];
 const PAYMENT_STATUSES = ['pending', 'completed', 'failed', 'refunded'];
@@ -49,13 +49,7 @@ const serializeOrder = (order) => {
   };
 };
 
-const emitIfReady = (room, event, payload) => {
-  try {
-    getIo().to(room).emit(event, payload);
-  } catch (error) {
-    // Socket.IO is optional during scripts/tests.
-  }
-};
+// emitIfReady is removed, handled by Kafka workers.
 
 exports.createOrder = async ({ user, body }) => {
   const { shippingAddress, paymentMethod, items = [], name, email } = body;
@@ -162,19 +156,19 @@ exports.createOrder = async ({ user, body }) => {
     data: { orderId: order._id, total: order.total },
   });
 
-  emitIfReady('admin_room', 'new-order', {
+  await produceEvent('order-events', 'new_order', {
     message: `New order #${order._id} received!`,
     order: serializeOrder(order),
     notification,
   });
 
-  lowStockProducts.forEach((product) => {
-    emitIfReady('admin_room', 'low-stock-alert', {
+  for (const product of lowStockProducts) {
+    await produceEvent('order-events', 'low_stock', {
       productId: product._id,
       name: product.name,
       stock: product.stock,
     });
-  });
+  }
 
   return serializeOrder(order);
 };
@@ -230,7 +224,8 @@ exports.updateOrderStatus = async ({ orderId, status, paymentStatus }) => {
 
   const serialized = serializeOrder(order);
   if (order.user?._id) {
-    emitIfReady(`user:${order.user._id}`, 'order-status-updated', {
+    await produceEvent('order-events', 'order_status_updated', {
+      userId: order.user._id,
       message: `Order #${order._id} status updated to ${serialized.status}.`,
       order: serialized,
     });
