@@ -8,7 +8,7 @@ Tekron is a state-of-the-art modern e-commerce application built with a premium 
 - **Database**: MongoDB (Containerized)
 - **Message Broker**: Apache Kafka & Zookeeper (Confluent 7.5.0) for high-performance decoupled event processing.
 - **Real-Time**: Socket.IO for live order status updates
-- **PDF Generation**: PDFKit (Native SVG rendering)
+- **PDF Generation**: Puppeteer (Beautiful HTML/Tailwind rendering)
 
 ## Quick Start
 You can launch the entire stack using the included batch script.
@@ -23,13 +23,7 @@ You can launch the entire stack using the included batch script.
 ### End-to-End Demo
 The application includes a fully verified, pristine checkout flow. When an order is placed, Kafka instantly picks up the `new_order` event and asynchronously generates a beautifully branded PDF invoice in the background without blocking the UI.
 
-<details>
-<summary><b>Click here to view the E2E Checkout Flow Recording</b></summary>
-<br>
-
-<video src="./e2e_demo.webm" controls="controls" width="100%"></video>
-
-</details>
+https://github.com/mhaseebhassan/tek-web-ecom/raw/main/e2e_demo.webm
 
 ## Features
 - Complete Cart & Checkout functionality
