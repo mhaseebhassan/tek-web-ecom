@@ -24,7 +24,11 @@ You can launch the entire stack using the included batch script.
 ### End-to-End Demo
 The application includes a fully verified, pristine checkout flow. When an order is placed, Kafka instantly picks up the `new_order` event and asynchronously generates a beautifully branded PDF invoice in the background without blocking the UI.
 
-![Tekron Homepage Screenshot](./screenshot.png)
+### Homepage Tour
+
+![Tekron Homepage - Hero Section](./screenshot_part_1.png)
+![Tekron Homepage - Features Section](./screenshot_part_2.png)
+![Tekron Homepage - Footer Section](./screenshot_part_3.png)
 
 ## Features
 - Complete Cart & Checkout functionality
