@@ -17,7 +17,7 @@ This project is built to mimic a highly scalable, enterprise-grade e-commerce pl
 
 - **Express.js Backend**: Acts as the core REST API. It handles authentication, data validation, and serves as the primary gateway between the frontend application and the database.
 - **Apache Kafka (Message Broker)**: Generating heavy PDF invoices synchronously during checkout blocks the server's main thread, causing slow page loads for the customer. With Kafka, the backend simply fires a `new_order` event and instantly returns a success response. A completely decoupled background worker listens to this event and handles the heavy lifting safely.
-- **Redis (Caching)**: E-commerce platforms are extremely read-heavy. Redis is utilized to cache frequent MongoDB queries (like fetching the product catalog), drastically reducing database load and delivering lightning-fast product pages to the frontend.
+- **Redis (Caching & Rate Limiting)**: E-commerce platforms are extremely read-heavy. Redis is utilized to cache frequent MongoDB queries (like fetching the product catalog), drastically reducing database load and delivering lightning-fast product pages to the frontend. It is also used to power distributed API rate limiting across all instances.
 - **Socket.IO (WebSockets)**: Because heavy tasks (like invoice generation) are moved to the background via Kafka, we need a way to tell the user when it's done. Socket.IO pushes a real-time notification to the client browser (and the Admin dashboard) the exact millisecond the PDF is ready, avoiding inefficient HTTP polling.
 - **Puppeteer**: Runs headlessly inside the Kafka worker to render a beautiful HTML/TailwindCSS template into a pristine, vector-sharp PDF document.
 ## Quick Start
