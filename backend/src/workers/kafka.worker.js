@@ -1,145 +1,162 @@
 const { consumer } = require('../config/kafka');
 const { getIo } = require('../sockets/socket');
-const PDFDocument = require('pdfkit');
 const fs = require('fs');
 const path = require('path');
 
 const generateInvoicePDF = async (orderData) => {
-  return new Promise((resolve, reject) => {
+  return new Promise(async (resolve, reject) => {
     try {
+      const puppeteer = require('puppeteer');
       const invoicesDir = path.join(__dirname, '../../uploads/invoices');
       if (!fs.existsSync(invoicesDir)) {
         fs.mkdirSync(invoicesDir, { recursive: true });
       }
 
       const filePath = path.join(invoicesDir, `invoice_${orderData.order.id}.pdf`);
-      const doc = new PDFDocument({ margin: 50, size: 'A4' });
-      const writeStream = fs.createWriteStream(filePath);
-
-      doc.pipe(writeStream);
-
-      // --- Brand Colors ---
-      const primaryColor = '#8B5CF6'; // Violet-500
-      const secondaryColor = '#C4B5FD'; // Violet-300
-      const textColor = '#1F2937'; // Gray-800
-      const lightGray = '#F9FAFB'; // Gray-50
-
-      // Draw top accent bar
-      doc.rect(0, 0, doc.page.width, 15).fill(primaryColor);
-
-      // --- Draw Native Tekron SVG Logo ---
-      doc.save();
-      // Translate to logo position (x=50, y=40) and scale up a bit
-      doc.translate(50, 40);
-      doc.scale(2);
-
-      // Base rounded box
-      doc.roundedRect(0, 0, 36, 36, 8).fill(primaryColor);
-
-      // SVG Paths translated for the T shape
-      doc.path('M7 8.5 H 25').lineWidth(3).lineCap('round').stroke('#FFFFFF');
-      doc.path('M16 8.5 V 24').lineWidth(3).lineCap('round').stroke('#FFFFFF');
-      doc.path('M9 24 H 23').lineWidth(3).lineCap('round').stroke(secondaryColor);
       
-      doc.restore();
-
-      // Invoice Title & Info
-      doc.fontSize(28).font('Helvetica-Bold').fillColor(primaryColor).text('INVOICE', 0, 50, { align: 'right' });
-      doc.fontSize(10).font('Helvetica').fillColor('#6B7280');
-      doc.text(`Invoice #: INV-${orderData.order.id.slice(-6).toUpperCase()}`, { align: 'right' });
-      doc.text(`Date: ${new Date(orderData.order.createdAt || Date.now()).toLocaleDateString()}`, { align: 'right' });
-      doc.text(`Order ID: ${orderData.order.id}`, { align: 'right' });
-
-      // Company Info under logo
-      doc.fontSize(20).font('Helvetica-Bold').fillColor(textColor).text('TEKRON', 135, 65);
-      doc.fontSize(10).font('Helvetica').fillColor('#6B7280').text('Premium Tech & Electronics', 135, 90);
-
-      doc.moveDown(3);
-
-      // --- Billing Info ---
       const customerName = orderData.order.user ? orderData.order.user.name : orderData.order.guestCustomer?.name || 'Guest';
       const customerEmail = orderData.order.user ? orderData.order.user.email : orderData.order.guestCustomer?.email || '';
-      
-      doc.fontSize(12).font('Helvetica-Bold').fillColor(textColor).text('Billed To:', 50, 150);
-      doc.fontSize(10).font('Helvetica').fillColor('#4B5563')
-         .text(customerName)
-         .text(customerEmail);
+      const orderDate = new Date(orderData.order.createdAt || Date.now()).toLocaleDateString();
+      const invoiceId = `INV-${orderData.order.id.slice(-6).toUpperCase()}`;
 
-      // Shipping Address
-      if (orderData.order.shippingAddress) {
-        doc.fontSize(12).font('Helvetica-Bold').fillColor(textColor).text('Shipped To:', 300, 150);
-        doc.fontSize(10).font('Helvetica').fillColor('#4B5563')
-           .text(orderData.order.shippingAddress.address, 300, 165)
-           .text(`${orderData.order.shippingAddress.city}, ${orderData.order.shippingAddress.postalCode}`, 300, 180)
-           .text(orderData.order.shippingAddress.country, 300, 195);
-      }
-
-      // --- Table Header ---
-      const tableTop = 250;
-      doc.rect(50, tableTop, 500, 25).fill(primaryColor);
-      
-      doc.font('Helvetica-Bold').fontSize(10).fillColor('#FFFFFF');
-      doc.text('Item Description', 60, tableTop + 7);
-      doc.text('Qty', 350, tableTop + 7, { width: 50, align: 'center' });
-      doc.text('Price', 400, tableTop + 7, { width: 50, align: 'right' });
-      doc.text('Total', 470, tableTop + 7, { width: 70, align: 'right' });
-
-      // --- Table Rows ---
-      let y = tableTop + 35;
-      doc.font('Helvetica').fontSize(10).fillColor(textColor);
-
+      // Build items HTML
+      let itemsHtml = '';
       orderData.order.items.forEach((item, i) => {
         const itemTotal = item.price * item.quantity;
-        
-        // Zebra striping
-        if (i % 2 === 0) {
-          doc.rect(50, y - 5, 500, 25).fill(lightGray);
-        }
-
-        doc.fillColor(textColor);
-        doc.text(item.name, 60, y, { width: 280, height: 15, ellipsis: true });
-        doc.text(item.quantity.toString(), 350, y, { width: 50, align: 'center' });
-        doc.text(`$${item.price.toFixed(2)}`, 400, y, { width: 50, align: 'right' });
-        doc.text(`$${itemTotal.toFixed(2)}`, 470, y, { width: 70, align: 'right' });
-
-        y += 25;
+        const bgClass = i % 2 === 0 ? 'bg-gray-50/50' : 'bg-white';
+        itemsHtml += `
+          <tr class="${bgClass} border-b border-gray-100 last:border-0 text-gray-700">
+            <td class="py-4 px-4 font-medium">${item.name}</td>
+            <td class="py-4 px-4 text-center">${item.quantity}</td>
+            <td class="py-4 px-4 text-right">$${item.price.toFixed(2)}</td>
+            <td class="py-4 px-4 text-right font-semibold">$${itemTotal.toFixed(2)}</td>
+          </tr>
+        `;
       });
 
-      // --- Totals ---
-      doc.moveTo(350, y + 10).lineTo(550, y + 10).strokeColor('#E5E7EB').stroke();
-      
-      y += 20;
-      doc.font('Helvetica').fillColor('#4B5563');
-      doc.text('Subtotal:', 350, y, { width: 100, align: 'right' });
-      doc.text(`$${orderData.order.subtotal.toFixed(2)}`, 470, y, { width: 70, align: 'right' });
+      let shippingHtml = '';
+      if (orderData.order.shippingAddress) {
+        shippingHtml = `
+          <div>
+            <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Shipped To</h3>
+            <p class="text-gray-800 font-medium">${orderData.order.shippingAddress.address}</p>
+            <p class="text-gray-600">${orderData.order.shippingAddress.city}, ${orderData.order.shippingAddress.postalCode}</p>
+            <p class="text-gray-600">${orderData.order.shippingAddress.country}</p>
+          </div>
+        `;
+      }
 
-      y += 20;
-      doc.text('Shipping:', 350, y, { width: 100, align: 'right' });
-      doc.text(`$${orderData.order.shippingFee.toFixed(2)}`, 470, y, { width: 70, align: 'right' });
+      const htmlContent = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="UTF-8">
+          <script src="https://cdn.tailwindcss.com"></script>
+          <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+          <style>
+            body { font-family: 'Inter', sans-serif; -webkit-print-color-adjust: exact; print-color-adjust: exact; background-color: #ffffff; }
+            .gradient-text { background: linear-gradient(to right, #8b5cf6, #d946ef); -webkit-background-clip: text; color: transparent; }
+          </style>
+        </head>
+        <body class="p-0 m-0">
+          <!-- Top Accent Line -->
+          <div class="h-3 w-full bg-gradient-to-r from-violet-600 to-fuchsia-600"></div>
+          
+          <div class="p-12 max-w-4xl mx-auto">
+            <!-- Header -->
+            <div class="flex justify-between items-start mb-16">
+              <div class="flex items-center gap-4">
+                <div class="bg-violet-600 rounded-xl p-3 shadow-lg shadow-violet-200">
+                  <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M4 8.5H28" stroke="white" stroke-width="3" stroke-linecap="round"/>
+                    <path d="M16 8.5V26" stroke="white" stroke-width="3" stroke-linecap="round"/>
+                    <path d="M8 26H24" stroke="#C4B5FD" stroke-width="3" stroke-linecap="round"/>
+                  </svg>
+                </div>
+                <div>
+                  <h1 class="text-3xl font-extrabold tracking-tight text-gray-900">TEKRON</h1>
+                  <p class="text-sm font-medium text-violet-600 tracking-wide uppercase mt-0.5">Premium Tech</p>
+                </div>
+              </div>
+              <div class="text-right">
+                <h2 class="text-4xl font-black text-gray-100 tracking-tighter uppercase mb-2">Invoice</h2>
+                <p class="text-gray-500 font-medium">Invoice Number: <span class="text-gray-900 ml-1">#${invoiceId}</span></p>
+                <p class="text-gray-500 font-medium mt-1">Date: <span class="text-gray-900 ml-1">${orderDate}</span></p>
+                <p class="text-gray-500 font-medium mt-1">Order ID: <span class="text-gray-900 ml-1">${orderData.order.id}</span></p>
+              </div>
+            </div>
 
-      y += 20;
-      doc.text('Tax (VAT):', 350, y, { width: 100, align: 'right' });
-      doc.text(`$${orderData.order.tax.toFixed(2)}`, 470, y, { width: 70, align: 'right' });
+            <!-- Addresses -->
+            <div class="grid grid-cols-2 gap-12 mb-12 bg-gray-50 rounded-2xl p-8 border border-gray-100">
+              <div>
+                <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Billed To</h3>
+                <p class="text-gray-800 font-bold text-lg">${customerName}</p>
+                <p class="text-gray-500 mt-1">${customerEmail}</p>
+              </div>
+              ${shippingHtml}
+            </div>
 
-      y += 20;
-      doc.moveTo(350, y).lineTo(550, y).strokeColor(primaryColor).lineWidth(2).stroke();
+            <!-- Order Table -->
+            <div class="rounded-2xl border border-gray-200 overflow-hidden mb-8 shadow-sm">
+              <table class="w-full text-left border-collapse">
+                <thead>
+                  <tr class="bg-gray-100/80 text-gray-500 text-xs uppercase tracking-wider">
+                    <th class="py-4 px-4 font-semibold">Description</th>
+                    <th class="py-4 px-4 text-center font-semibold">Qty</th>
+                    <th class="py-4 px-4 text-right font-semibold">Unit Price</th>
+                    <th class="py-4 px-4 text-right font-semibold">Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${itemsHtml}
+                </tbody>
+              </table>
+            </div>
 
-      y += 10;
-      doc.font('Helvetica-Bold').fontSize(14).fillColor(primaryColor);
-      doc.text('Total:', 350, y, { width: 100, align: 'right' });
-      doc.text(`$${orderData.order.total.toFixed(2)}`, 470, y, { width: 70, align: 'right' });
+            <!-- Totals -->
+            <div class="flex justify-end mb-16">
+              <div class="w-72 space-y-3 text-gray-600">
+                <div class="flex justify-between text-sm font-medium">
+                  <span>Subtotal</span>
+                  <span class="text-gray-900">$${orderData.order.subtotal.toFixed(2)}</span>
+                </div>
+                <div class="flex justify-between text-sm font-medium">
+                  <span>Shipping</span>
+                  <span class="text-gray-900">$${orderData.order.shippingFee.toFixed(2)}</span>
+                </div>
+                <div class="flex justify-between text-sm font-medium">
+                  <span>Tax (VAT)</span>
+                  <span class="text-gray-900">$${orderData.order.tax.toFixed(2)}</span>
+                </div>
+                <div class="pt-4 mt-4 border-t-2 border-gray-100 flex justify-between items-center">
+                  <span class="text-base font-bold text-gray-900">Total Amount</span>
+                  <span class="text-2xl font-black text-violet-600">$${orderData.order.total.toFixed(2)}</span>
+                </div>
+              </div>
+            </div>
 
-      // --- Footer ---
-      const footerY = doc.page.height - 100;
-      doc.moveTo(50, footerY).lineTo(550, footerY).strokeColor('#E5E7EB').lineWidth(1).stroke();
-      doc.font('Helvetica').fontSize(10).fillColor('#9CA3AF');
-      doc.text('Thank you for your business!', 50, footerY + 15, { align: 'center' });
-      doc.text('If you have any questions about this invoice, please contact support@tekron.com', 50, footerY + 30, { align: 'center' });
+            <!-- Footer -->
+            <div class="pt-8 border-t border-gray-200 text-center">
+              <p class="text-lg font-bold text-gray-800 mb-1">Thank you for your business!</p>
+              <p class="text-sm text-gray-500">If you have any questions, please contact <span class="font-medium text-violet-600">support@tekron.com</span></p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `;
 
-      doc.end();
+      const browser = await puppeteer.launch({ headless: 'new', args: ['--no-sandbox'] });
+      const page = await browser.newPage();
+      await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
+      await page.pdf({
+        path: filePath,
+        format: 'A4',
+        printBackground: true,
+        margin: { top: '0', bottom: '0', left: '0', right: '0' }
+      });
 
-      writeStream.on('finish', () => resolve(filePath));
-      writeStream.on('error', reject);
+      await browser.close();
+      resolve(filePath);
     } catch (error) {
       reject(error);
     }
