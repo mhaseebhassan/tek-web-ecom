@@ -26,9 +26,14 @@ graph TB
         Models["Mongoose Models"]
     end
 
+    subgraph Background["Event-Driven Worker"]
+        KafkaWorker["Kafka PDF Consumer (pdfkit)"]
+    end
+
     subgraph Data["Data Layer"]
         MongoDB["MongoDB (port 27017)"]
         Redis["Redis (port 6379)"]
+        Kafka["Apache Kafka & Zookeeper (port 9092)"]
     end
 
     subgraph Realtime["Real-Time"]
@@ -39,6 +44,9 @@ graph TB
     API -->|HTTP /api/v1/*| Routes
     Routes --> Middleware --> Controllers --> Services --> Repos --> Models --> MongoDB
     Controllers -.->|Cache read/write| Redis
+    Services -->|Publish Event| Kafka
+    Kafka -->|Consume Event| KafkaWorker
+    KafkaWorker -.->|Emit Ready Event| SocketIO
     Services -.->|Emit events| SocketIO
     SocketIO -.->|Push to browser| Pages
 ```
@@ -272,6 +280,7 @@ graph TB
 | ✅ **JWT Auth** | Memory access tokens + httpOnly refresh rotation. | The VIP Wristband used instead of sessions. | `auth.controller.js` |
 | ✅ **Input Validation** | Joi schemas with `stripUnknown`. | The Spellchecker deleting malicious input. | `validators/` |
 | ✅ **WebSockets** | Socket.IO with JWT auth + rooms. | The Walkie-Talkie for instant live updates. | `socket.js` |
+| ✅ **Event-Driven Broker** | Apache Kafka producing `order-events`. | The Delivery Chute for heavy tasks. | `kafka.worker.js` |
 | ✅ **Atomic Stock** | `$inc` with `$gte` guard + rollback. | Carefully deducting stock to stop double-buys. | `order.service.js` |
 | ✅ **Guest Checkout** | `optionalAuth` + `guestCustomer` embedded doc. | Buying without creating an account. | `order.routes.js` |
 
@@ -310,6 +319,10 @@ graph TB
 **Q8: Why did you add Redis Rate Limiting, and what are the exact limits?**
 * **Technical**: "I implemented distributed rate limiting using `express-rate-limit` backed by Redis. This protects the API from DDoS and brute-force attacks across all node instances. The `globalLimiter` restricts general API access to 100 requests per 15 minutes per IP. The `authLimiter` is much stricter, limiting login and registration attempts to 10 requests per 15 minutes to prevent credential stuffing."
 * **Analogy**: "It's like having two bouncers at a club. The main bouncer lets someone ask the bartender 100 questions every 15 minutes, but the VIP bouncer only lets someone try to guess the secret VIP password 10 times before kicking them out."
+
+**Q9: Why did you implement Apache Kafka?**
+* **Technical**: "I used Kafka to implement an Event-Driven Architecture. Tasks like generating a PDF invoice are CPU-heavy and block the Node.js event loop. Instead of making the user wait 5 seconds at checkout, the Express server instantly responds 'Success!' and drops an `order-created` event into Kafka. A separate background worker consumes this event, generates the PDF, and uses Socket.IO to notify the admin only when it's finished."
+* **Analogy**: "If you order a burger at McDonald's, the cashier doesn't walk to the back and cook it while you wait. They take your money instantly, yell the order to the kitchen (Kafka), and give you a receipt so you can step aside while the kitchen handles the heavy lifting."
 
 ---
 
