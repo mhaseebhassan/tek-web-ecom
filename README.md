@@ -11,6 +11,15 @@ Tekron is a state-of-the-art modern e-commerce application built with a premium 
 - **Real-Time**: Socket.IO for live order status updates
 - **PDF Generation**: Puppeteer (Beautiful HTML/Tailwind rendering)
 
+## Architecture & Technologies Explained
+
+This project is built to mimic a highly scalable, enterprise-grade e-commerce platform. Here is why each core backend technology was chosen:
+
+- **Express.js Backend**: Acts as the core REST API. It handles authentication, data validation, and serves as the primary gateway between the frontend application and the database.
+- **Apache Kafka (Message Broker)**: Generating heavy PDF invoices synchronously during checkout blocks the server's main thread, causing slow page loads for the customer. With Kafka, the backend simply fires a `new_order` event and instantly returns a success response. A completely decoupled background worker listens to this event and handles the heavy lifting safely.
+- **Redis (Caching)**: E-commerce platforms are extremely read-heavy. Redis is utilized to cache frequent MongoDB queries (like fetching the product catalog), drastically reducing database load and delivering lightning-fast product pages to the frontend.
+- **Socket.IO (WebSockets)**: Because heavy tasks (like invoice generation) are moved to the background via Kafka, we need a way to tell the user when it's done. Socket.IO pushes a real-time notification to the client browser (and the Admin dashboard) the exact millisecond the PDF is ready, avoiding inefficient HTTP polling.
+- **Puppeteer**: Runs headlessly inside the Kafka worker to render a beautiful HTML/TailwindCSS template into a pristine, vector-sharp PDF document.
 ## Quick Start
 You can launch the entire stack using the included batch script.
 
