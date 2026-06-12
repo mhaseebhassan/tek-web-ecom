@@ -4,13 +4,24 @@ const { getRedisClient, connectRedis } = require('../config/redis');
 
 const sendCommand = async (...args) => {
   let client = getRedisClient();
+  
+  // If no client or it's not connected, try to connect but DON'T await indefinitely
   if (!client || !client.isOpen) {
-    client = await connectRedis(); // Wait for it to connect on boot
+    try {
+      client = await Promise.race([
+        connectRedis(),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Redis connection timeout')), 2000))
+      ]);
+    } catch (err) {
+      console.warn('Rate limiter bypassing Redis due to connection issue:', err.message);
+      throw err; // rate-limit-redis will handle the error and fallback/fail open
+    }
   }
+  
   if (client && client.isOpen) {
     return client.sendCommand(args);
   }
-  // Graceful fallback if Redis drops; express-rate-limit handles errors
+  
   throw new Error('Redis not connected');
 };
 
