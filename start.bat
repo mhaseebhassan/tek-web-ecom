@@ -4,9 +4,13 @@ echo                 TEKRON E-COMMERCE LAUNCHER
 echo ==============================================================
 echo.
 
-echo [1/3] Starting Docker Compose (Kafka ^& Zookeeper)...
+echo [1/3] Starting Docker Compose (Kafka, Zookeeper, Redis)...
 cd /d "%~dp0"
 docker compose up -d
+
+echo.
+echo [*] Waiting 20 seconds for Kafka to fully initialize...
+timeout /t 20 /nobreak > NUL
 
 echo.
 echo [2/3] Starting Backend Server...
