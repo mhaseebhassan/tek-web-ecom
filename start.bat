@@ -13,12 +13,17 @@ echo [*] Waiting 20 seconds for Kafka to fully initialize...
 timeout /t 20 /nobreak > NUL
 
 echo.
-echo [2/3] Starting Backend Server...
+echo [2/4] Starting Backend Server...
 cd /d "%~dp0\backend"
 start "Tekron Backend" cmd /c "npm run dev"
 
 echo.
-echo [3/3] Starting Frontend Server...
+echo [3/4] Starting Kafka Background Worker...
+cd /d "%~dp0\backend"
+start "Tekron Background Worker" cmd /c "node src/workers/kafka.worker.js"
+
+echo.
+echo [4/4] Starting Frontend Server...
 cd /d "%~dp0\frontend"
 start "Tekron Frontend" cmd /c "npm run dev"
 

@@ -37,9 +37,7 @@ The application includes a fully verified, pristine checkout flow. When an order
 
 ### Homepage Tour
 
-![Tekron Homepage - Hero Section](./screenshot_part_1.png)
-![Tekron Homepage - Features Section](./screenshot_part_2.png)
-![Tekron Homepage - Footer Section](./screenshot_part_3.png)
+![Tekron Homepage](./ss.png)
 
 ## Features
 - Complete Cart & Checkout functionality
